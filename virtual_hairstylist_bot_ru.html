@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -18,6 +18,9 @@
         @keyframes zoomIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         [x-cloak] { display: none !important; }
     </style>
+    <!-- 1. Загружаем Alpine.js -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <!-- 2. Определяем компонент, который будет ждать инициализации Alpine -->
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('imageGenerator', () => ({
@@ -29,9 +32,23 @@
                 statusText: 'Магия начинается...',
                 modal: { visible: false, title: '', content: '', type: 'text' },
                 animation: { timer: null, isOriginal: true },
-                apiKey: "", // API-ключ будет предоставлен средой выполнения
+                apiKey: "",
+                apiKeyInput: "",
 
-                // --- Обработка файлов ---
+                init() {
+                    const savedKey = localStorage.getItem('geminiApiKey');
+                    if (savedKey) {
+                        this.apiKey = savedKey;
+                        this.apiKeyInput = savedKey;
+                    }
+                },
+
+                saveApiKey() {
+                    localStorage.setItem('geminiApiKey', this.apiKeyInput);
+                    this.apiKey = this.apiKeyInput;
+                    this.openModal('API ключ сохранен в браузере!', 'Успешно', 'text');
+                },
+
                 handleFileSelect(event, photoType) {
                     const file = event.target.files[0];
                     if (file) this.processFile(file, photoType);
@@ -46,13 +63,9 @@
                         return;
                     }
                     const reader = new FileReader();
-                    reader.onload = (e) => {
-                        this[photoType].preview = e.target.result;
-                    };
+                    reader.onload = (e) => { this[photoType].preview = e.target.result; };
                     reader.readAsDataURL(file);
-                    this.toBase64(file).then(base64 => {
-                        this[photoType].file = base64;
-                    });
+                    this.toBase64(file).then(base64 => { this[photoType].file = base64; });
                 },
                 toBase64(file) {
                     return new Promise((resolve, reject) => {
@@ -63,7 +76,6 @@
                     });
                 },
 
-                // --- Модальные окна ---
                 openModal(content, title = 'Просмотр', type = 'image') {
                     this.modal = { visible: true, title, content, type };
                     if (type === 'animation') this.startAnimation();
@@ -77,34 +89,35 @@
                     this.openModal(message, 'Ошибка', 'text');
                 },
                 
-                // --- Анимация ---
                 createAnimation() {
                     this.openModal('', 'Анимация До/После', 'animation');
                 },
                 startAnimation() {
                     this.animation.isOriginal = true;
-                    this.animation.timer = setInterval(() => {
-                        this.animation.isOriginal = !this.animation.isOriginal;
-                    }, 1500);
+                    this.animation.timer = setInterval(() => { this.animation.isOriginal = !this.animation.isOriginal; }, 1500);
                 },
 
-                // --- Взаимодействие с API ---
                 async callApi(apiUrl, payload) {
                     this.loading = true;
+                    let effectiveApiKey = this.apiKey || (typeof __API_KEY__ !== 'undefined' ? __API_KEY__ : '');
+                    if (!effectiveApiKey) {
+                        this.showErrorModal('API ключ не указан. Пожалуйста, вставьте ваш ключ в поле вверху страницы и сохраните.');
+                        return null;
+                    }
+                    
+                    const finalApiUrl = `${apiUrl}?key=${effectiveApiKey}`;
+
                     try {
-                        const response = await fetch(apiUrl, {
+                        const response = await fetch(finalApiUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(payload)
                         });
-
                         if (!response.ok) {
                             const errorBody = await response.json();
                             throw new Error(`HTTP error! status: ${response.status}, message: ${errorBody.error.message}`);
                         }
-                        
                         return await response.json();
-
                     } catch (error) {
                         console.error('API Error:', error);
                         this.showErrorModal('Произошла ошибка сети или API. Попробуйте снова. Детали: ' + error.message);
@@ -116,69 +129,37 @@
 
                 async generateImage(isUpscale) {
                     this.statusText = isUpscale ? 'Улучшаем качество...' : 'Создаем новый образ...';
-                    
                     let userPrompt = this.prompt || "новая прическа";
-                    if(isUpscale) {
-                        userPrompt = "улучшить качество, высокая детализация, 4k. " + userPrompt;
-                    }
-
-                    const systemPrompt = `
-                        ТЫ — ПРОФЕССИОНАЛЬНЫЙ ФОТОРЕАЛИСТИЧНЫЙ AI-ПАРИКМАХЕР.
-                        ТВОЯ ЗАДАЧА: Заменить волосы на фото человека согласно запросу.
-                        АБСОЛЮТНОЕ ТРЕБОВАНИЕ: Лицо, черты лица, выражение лица, кожа, одежда и фон ДОЛЖНЫ ОСТАВАТЬСЯ ПОЛНОСТЬЮ НЕИЗМЕННЫМИ. Изменяются ТОЛЬКО ВОЛОСЫ (прическа, цвет, длина).
-                        Сохраняй исходное качество и стиль фотографии. Результат должен быть фотореалистичным.
-                    `;
-                    
+                    if (isUpscale) { userPrompt = "улучшить качество, высокая детализация, 4k. " + userPrompt; }
+                    const systemPrompt = "ТЫ — ПРОФЕССИОНАЛЬНЫЙ ФОТОРЕАЛИСТИЧНЫЙ AI-ПАРИКМАХЕР. ТВОЯ ЗАДАЧА: Заменить волосы на фото человека согласно запросу. АБСОЛЮТНОЕ ТРЕБОВАНИЕ: Лицо, черты лица, выражение лица, кожа, одежда и фон ДОЛЖНЫ ОСТАВАТЬСЯ ПОЛНОСТЬЮ НЕИЗМЕННЫМИ. Изменяются ТОЛЬКО ВОЛОСЫ (прическа, цвет, длина). Сохраняй исходное качество и стиль фотографии. Результат должен быть фотореалистичным.";
                     const payload = {
-                        contents: [{
-                            parts: [
-                                { text: systemPrompt },
-                                { text: `ЗАПРОС КЛИЕНТА: ${userPrompt}` },
-                                { inlineData: { mimeType: "image/jpeg", data: this.clientPhoto.file } }
-                            ]
-                        }],
+                        contents: [{ parts: [ { text: systemPrompt }, { text: `ЗАПРОС КЛИЕНТА: ${userPrompt}` }, { inlineData: { mimeType: "image/jpeg", data: this.clientPhoto.file } } ] }],
                         generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
                     };
-
                     if (this.stylePhoto.file) {
                         payload.contents[0].parts.push({ text: "ИСПОЛЬЗУЙ ЭТО ФОТО КАК ОБРАЗЕЦ СТИЛЯ ПРИЧЕСКИ:" });
                         payload.contents[0].parts.push({ inlineData: { mimeType: "image/jpeg", data: this.stylePhoto.file } });
                     }
-
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${this.apiKey}`;
+                    const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent";
                     const result = await this.callApi(apiUrl, payload);
-
                     if (result) {
                         const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-                        if (base64Data) {
-                            this.generatedImage.preview = `data:image/png;base64,${base64Data}`;
-                        } else {
-                            this.showErrorModal('Не удалось получить изображение от AI. Ответ не содержит данных.');
-                        }
+                        if (base64Data) { this.generatedImage.preview = `data:image/png;base64,${base64Data}`; } 
+                        else { this.showErrorModal('Не удалось получить изображение от AI. Ответ не содержит данных.'); }
                     }
                 },
 
                 async callLLM(systemPrompt, userPrompt, imageFile = null) {
                     const payload = {
-                        contents: [{
-                            parts: [{ text: userPrompt }]
-                        }],
-                        systemInstruction: {
-                            parts: [{ text: systemPrompt }]
-                        }
+                        contents: [{ parts: [{ text: userPrompt }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] }
                     };
-                    if(imageFile) {
-                         payload.contents[0].parts.push({ inlineData: { mimeType: "image/jpeg", data: imageFile } });
-                    }
-                    
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${this.apiKey}`;
+                    if(imageFile) { payload.contents[0].parts.push({ inlineData: { mimeType: "image/jpeg", data: imageFile } }); }
+                    const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
                     const result = await this.callApi(apiUrl, payload);
-
                     if (result) {
                         const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-                        if (text) {
-                            return text;
-                        }
+                        if (text) { return text; }
                     }
                     this.showErrorModal('Не удалось получить ответ от языковой модели.');
                     return null;
@@ -188,116 +169,119 @@
                     const systemPrompt = "Ты - опытный парикмахер-стилист. Проанализируй фото клиента и кратко, списком (используя *), предложи 3-4 варианта стрижек или причесок, которые подойдут к его типу лица. Говори на русском языке.";
                     const userPrompt = "Посоветуй, какие прически мне подойдут?";
                     const result = await this.callLLM(systemPrompt, userPrompt, this.clientPhoto.file);
-                    if (result) {
-                        this.openModal(result.replace(/\*/g, '•'), 'Рекомендации по прическам', 'text');
-                    }
+                    if (result) { this.openModal(result.replace(/\*/g, '•'), 'Рекомендации по прическам', 'text'); }
                 },
                 
                 async describeHairstyle() {
                     const systemPrompt = "Ты - профессиональный парикмахер. Опиши прическу на фото. Укажи тип стрижки, длину, цвет, укладку. Будь краток и точен. Говори на русском языке.";
                     const userPrompt = "Опиши эту прическу.";
                     const result = await this.callLLM(systemPrompt, userPrompt, this.stylePhoto.file);
-                    if (result) {
-                        this.prompt = result;
-                    }
+                    if (result) { this.prompt = result; }
                 }
             }));
         });
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
 <body class="bg-gray-900 text-white min-h-screen antialiased animated-gradient bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
 
-<div x-data="imageGenerator" class="container mx-auto p-4 max-w-4xl">
-    <header class="text-center my-6">
-        <h1 class="text-4xl md:text-5xl font-bold tracking-tight">Виртуальный Стилист <span class="text-purple-400">AI</span></h1>
-        <p class="text-gray-300 mt-2 text-lg">Примерьте новый образ за секунды</p>
-    </header>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-        <!-- Левая колонка: Ввод данных -->
-        <div class="glass-effect rounded-2xl p-6 space-y-6">
-            <div>
-                <h3 class="text-lg font-semibold mb-3 border-b-2 border-purple-500 pb-2">1. Загрузите ваше фото</h3>
-                <div @dragover.prevent @drop.prevent="handleFileDrop($event, 'clientPhoto')" class="image-container relative bg-gray-800 rounded-lg h-64 flex items-center justify-center border-2 border-dashed border-gray-600 hover:border-purple-500 transition-colors cursor-pointer" @click="$refs.clientPhotoInput.click()">
-                    <template x-if="!clientPhoto.preview">
-                        <div class="text-center text-gray-400 placeholder">
-                            <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            <p class="mt-2">Нажмите или перетащите фото</p>
-                        </div>
-                    </template>
-                    <template x-if="clientPhoto.preview">
-                        <img :src="clientPhoto.preview" alt="Фото клиента" class="rounded-lg h-full w-full" @click.stop="openModal(clientPhoto.preview)">
-                    </template>
-                </div>
-                <input type="file" x-ref="clientPhotoInput" @change="handleFileSelect($event, 'clientPhoto')" accept="image/*" class="hidden">
-                 <button x-show="clientPhoto.preview" @click="getHairstyleSuggestions()" :disabled="loading" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center">
-                    <svg x-show="!loading" class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.572L16.5 21.75l-.398-1.178a3.375 3.375 0 00-2.456-2.456L12.5 18l1.178-.398a3.375 3.375 0 002.456-2.456L16.5 14.25l.398 1.178a3.375 3.375 0 002.456 2.456L20.5 18l-1.178.398a3.375 3.375 0 00-2.456 2.456z" /></svg>
-                    <span x-text="loading ? 'Анализ...' : '✨ Подобрать прическу по фото'"></span>
-                </button>
-            </div>
-
-            <div>
-                <h3 class="text-lg font-semibold mb-3 border-b-2 border-purple-500 pb-2">2. Опишите или покажите прическу</h3>
-                <textarea x-model="prompt" rows="3" class="w-full bg-gray-800 border-2 border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition" placeholder="Например: длинные волнистые волосы медного цвета..."></textarea>
-                <p class="text-center text-gray-400 my-2">-- ИЛИ --</p>
-                <div @dragover.prevent @drop.prevent="handleFileDrop($event, 'stylePhoto')" class="image-container relative bg-gray-800 rounded-lg h-48 flex items-center justify-center border-2 border-dashed border-gray-600 hover:border-purple-500 transition-colors cursor-pointer" @click="$refs.stylePhotoInput.click()">
-                    <template x-if="!stylePhoto.preview">
-                         <div class="text-center text-gray-400 placeholder">
-                            <svg class="w-10 h-10 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-4-4V6a4 4 0 014-4h10a4 4 0 014 4v6a4 4 0 01-4 4H7z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-4-4V6a4 4 0 014-4h10a4 4 0 014 4v6a4 4 0 01-4 4H7z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M7 16V8m0 0a2 2 0 100-4 2 2 0 000 4zm0 0v8"></path></svg>
-                            <p class="mt-2">Загрузите фото-пример</p>
-                        </div>
-                    </template>
-                    <template x-if="stylePhoto.preview">
-                        <img :src="stylePhoto.preview" alt="Фото прически" class="rounded-lg h-full w-full" @click.stop="openModal(stylePhoto.preview)">
-                    </template>
-                </div>
-                <input type="file" x-ref="stylePhotoInput" @change="handleFileSelect($event, 'stylePhoto')" accept="image/*" class="hidden">
-                 <button x-show="stylePhoto.preview" @click="describeHairstyle()" :disabled="loading" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center">
-                     <svg x-show="!loading" class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 6.75h17.25M3.375 12h17.25M3.375 17.25h17.25" /></svg>
-                    <span x-text="loading ? 'Описание...' : '✨ Описать прическу с фото'"></span>
-                </button>
-            </div>
-            
-            <button @click="generateImage(false)" :disabled="loading || !clientPhoto.file || (!prompt && !stylePhoto.file)" class="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white font-bold py-3 px-4 rounded-lg text-lg transition transform hover:scale-105">
-                <span x-show="!loading">Сгенерировать образ</span>
-                <span x-show="loading">Создание...</span>
-            </button>
+<div x-data="imageGenerator" class="container mx-auto max-w-4xl">
+    
+    <div class="p-4 bg-gray-800/50 backdrop-blur-sm rounded-b-2xl mb-6 sticky top-0 z-10">
+        <label for="apiKeyInput" class="block mb-2 text-sm font-medium text-gray-300">Для тестирования вставьте ваш Google AI API ключ:</label>
+        <div class="flex">
+            <input type="password" id="apiKeyInput" x-model="apiKeyInput" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full p-2.5" placeholder="Введите ваш API ключ">
+            <button @click="saveApiKey()" class="ml-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg">Сохранить</button>
         </div>
+    </div>
 
-        <!-- Правая колонка: Результат -->
-        <div class="glass-effect rounded-2xl p-6 space-y-6">
-            <h3 class="text-lg font-semibold mb-3 border-b-2 border-purple-500 pb-2">3. Результат</h3>
-            <div class="image-container relative bg-gray-800 rounded-lg h-64 flex items-center justify-center border-2 border-gray-700">
-                <template x-if="!loading && !generatedImage.preview">
-                    <div class="text-center text-gray-400">
-                        <svg class="w-12 h-12 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.82m5.84-2.56a12.022 12.022 0 01-11.68 0 6 6 0 1111.68 0z" /></svg>
-                        <p class="mt-2">Здесь появится ваша новая прическа</p>
+    <div class="p-4">
+        <header class="text-center my-6">
+            <h1 class="text-4xl md:text-5xl font-bold tracking-tight">Виртуальный Стилист <span class="text-purple-400">AI</span></h1>
+            <p class="text-gray-300 mt-2 text-lg">Примерьте новый образ за секунды</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            <div class="glass-effect rounded-2xl p-6 space-y-6">
+                <div>
+                    <h3 class="text-lg font-semibold mb-3 border-b-2 border-purple-500 pb-2">1. Загрузите ваше фото</h3>
+                    <div @dragover.prevent @drop.prevent="handleFileDrop($event, 'clientPhoto')" class="image-container relative bg-gray-800 rounded-lg h-64 flex items-center justify-center border-2 border-dashed border-gray-600 hover:border-purple-500 transition-colors cursor-pointer" @click="$refs.clientPhotoInput.click()">
+                        <template x-if="!clientPhoto.preview">
+                            <div class="text-center text-gray-400 placeholder">
+                                <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <p class="mt-2">Нажмите или перетащите фото</p>
+                            </div>
+                        </template>
+                        <template x-if="clientPhoto.preview">
+                            <img :src="clientPhoto.preview" alt="Фото клиента" class="rounded-lg h-full w-full" @click.stop="openModal(clientPhoto.preview)">
+                        </template>
                     </div>
-                </template>
-                <div x-show="loading" class="flex flex-col items-center justify-center">
-                    <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24 mb-4"></div>
-                    <p class="text-lg text-gray-300" x-text="statusText"></p>
+                    <input type="file" x-ref="clientPhotoInput" @change="handleFileSelect($event, 'clientPhoto')" accept="image/*" class="hidden">
+                    <button x-show="clientPhoto.preview" @click="getHairstyleSuggestions()" :disabled="loading" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center">
+                        <svg x-show="!loading" class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.572L16.5 21.75l-.398-1.178a3.375 3.375 0 00-2.456-2.456L12.5 18l1.178-.398a3.375 3.375 0 002.456-2.456L16.5 14.25l.398 1.178a3.375 3.375 0 002.456 2.456L20.5 18l-1.178.398a3.375 3.375 0 00-2.456 2.456z" /></svg>
+                        <span x-text="loading ? 'Анализ...' : '✨ Подобрать прическу по фото'"></span>
+                    </button>
                 </div>
-                <template x-if="generatedImage.preview">
-                    <img :src="generatedImage.preview" alt="Сгенерированное изображение" class="rounded-lg h-full w-full" @click.stop="openModal(generatedImage.preview)">
-                </template>
+
+                <div>
+                    <h3 class="text-lg font-semibold mb-3 border-b-2 border-purple-500 pb-2">2. Опишите или покажите прическу</h3>
+                    <textarea x-model="prompt" rows="3" class="w-full bg-gray-800 border-2 border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition" placeholder="Например: длинные волнистые волосы медного цвета..."></textarea>
+                    <p class="text-center text-gray-400 my-2">-- ИЛИ --</p>
+                    <div @dragover.prevent @drop.prevent="handleFileDrop($event, 'stylePhoto')" class="image-container relative bg-gray-800 rounded-lg h-48 flex items-center justify-center border-2 border-dashed border-gray-600 hover:border-purple-500 transition-colors cursor-pointer" @click="$refs.stylePhotoInput.click()">
+                        <template x-if="!stylePhoto.preview">
+                            <div class="text-center text-gray-400 placeholder">
+                                <svg class="w-10 h-10 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-4-4V6a4 4 0 014-4h10a4 4 0 014 4v6a4 4 0 01-4 4H7z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-4-4V6a4 4 0 014-4h10a4 4 0 014 4v6a4 4 0 01-4 4H7z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M7 16V8m0 0a2 2 0 100-4 2 2 0 000 4zm0 0v8"></path></svg>
+                                <p class="mt-2">Загрузите фото-пример</p>
+                            </div>
+                        </template>
+                        <template x-if="stylePhoto.preview">
+                            <img :src="stylePhoto.preview" alt="Фото прически" class="rounded-lg h-full w-full" @click.stop="openModal(stylePhoto.preview)">
+                        </template>
+                    </div>
+                    <input type="file" x-ref="stylePhotoInput" @change="handleFileSelect($event, 'stylePhoto')" accept="image/*" class="hidden">
+                    <button x-show="stylePhoto.preview" @click="describeHairstyle()" :disabled="loading" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center">
+                        <svg x-show="!loading" class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 6.75h17.25M3.375 12h17.25M3.375 17.25h17.25" /></svg>
+                        <span x-text="loading ? 'Описание...' : '✨ Описать прическу с фото'"></span>
+                    </button>
+                </div>
+                
+                <button @click="generateImage(false)" :disabled="loading || !clientPhoto.file || (!prompt && !stylePhoto.file)" class="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white font-bold py-3 px-4 rounded-lg text-lg transition transform hover:scale-105">
+                    <span x-show="!loading">Сгенерировать образ</span>
+                    <span x-show="loading">Создание...</span>
+                </button>
             </div>
-            
-            <div class="grid grid-cols-2 gap-4" x-show="generatedImage.preview">
-                <button @click="generateImage(true)" :disabled="loading" class="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                    Улучшить качество
-                </button>
-                <button @click="createAnimation()" :disabled="loading" class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    Анимация До/После
-                </button>
+
+            <div class="glass-effect rounded-2xl p-6 space-y-6">
+                <h3 class="text-lg font-semibold mb-3 border-b-2 border-purple-500 pb-2">3. Результат</h3>
+                <div class="image-container relative bg-gray-800 rounded-lg h-64 flex items-center justify-center border-2 border-gray-700">
+                    <template x-if="!loading && !generatedImage.preview">
+                        <div class="text-center text-gray-400">
+                            <svg class="w-12 h-12 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.82m5.84-2.56a12.022 12.022 0 01-11.68 0 6 6 0 1111.68 0z" /></svg>
+                            <p class="mt-2">Здесь появится ваша новая прическа</p>
+                        </div>
+                    </template>
+                    <div x-show="loading" class="flex flex-col items-center justify-center">
+                        <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24 mb-4"></div>
+                        <p class="text-lg text-gray-300" x-text="statusText"></p>
+                    </div>
+                    <template x-if="generatedImage.preview">
+                        <img :src="generatedImage.preview" alt="Сгенерированное изображение" class="rounded-lg h-full w-full" @click.stop="openModal(generatedImage.preview)">
+                    </template>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4" x-show="generatedImage.preview">
+                    <button @click="generateImage(true)" :disabled="loading" class="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Улучшить качество
+                    </button>
+                    <button @click="createAnimation()" :disabled="loading" class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Анимация До/После
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-    
-    <!-- Модальное окно для ошибок и сообщений -->
+
     <div x-show="modal.visible" x-cloak class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50" @click="closeModal()">
         <div class="bg-gray-800 rounded-2xl shadow-lg max-w-lg w-full p-6 text-center modal-image-animation" @click.stop>
             <h3 class="text-2xl font-bold mb-4" x-text="modal.title"></h3>
@@ -312,8 +296,6 @@
         </div>
     </div>
 </div>
-
-
 
 </body>
 </html>
