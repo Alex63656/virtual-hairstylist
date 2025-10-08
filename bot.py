@@ -16,6 +16,11 @@ WEB_APP_URL = os.getenv('WEB_APP_URL')
 # Включаем логирование, чтобы видеть информацию о работе бота в консоли Railway
 logging.basicConfig(level=logging.INFO)
 
+# Добавляем проверку, чтобы убедиться, что токен был найден
+if not BOT_TOKEN:
+    logging.critical("!!! ОШИБКА: Переменная окружения BOT_TOKEN не установлена! Пожалуйста, добавьте ее во вкладке 'Variables' на Railway и убедитесь, что имя написано правильно.")
+    exit() # Завершаем работу, если токена нет
+
 # Инициализация бота и диспетчера
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
