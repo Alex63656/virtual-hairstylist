@@ -82,7 +82,7 @@
                 async callProxy(targetApi, payload) {
                     this.loading = true;
                     // !!! ВАЖНО: ЗАМЕНИТЕ ЭТОТ АДРЕС НА ВАШ ПУБЛИЧНЫЙ URL С ХОСТИНГА !!!
-                    const proxyUrl = 'https://ВАШ_АДРЕС_С_RAILWAY.up.railway.app'; 
+                    const proxyUrl = 'virtual-hairstylist-production.up.railway.app'; 
 
                     try {
                         const response = await fetch(`${proxyUrl}/api/proxy`, {
@@ -276,3 +276,4 @@
 
 </body>
 </html>
+
