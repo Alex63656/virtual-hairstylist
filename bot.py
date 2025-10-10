@@ -4,6 +4,15 @@ import os
 import aiohttp
 from aiohttp import web
 
+# --- ДИАГНОСТИЧЕСКИЙ БЛОК ---
+# Этот код выполнится в самом начале и покажет нам, какие переменные видит бот
+print("--- ЗАПУСК ДИАГНОСТИКИ ---")
+print("BOT_TOKEN:", os.getenv("BOT_TOKEN"))
+print("WEB_APP_URL:", os.getenv("WEB_APP_URL"))
+print("GEMINI_API_KEY:", os.getenv("GEMINI_API_KEY"))
+print("--- КОНЕЦ ДИАГНОСТИКИ ---")
+# -----------------------------
+
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
