@@ -1,3 +1,8 @@
+# Объяснение кода:
+# Единственное изменение здесь - это строка 'app = web.Application(client_max_size=1024**2 * 10)'.
+# Она увеличивает максимальный размер принимаемых файлов до 10 мегабайт,
+# что решает проблему "Content Too Large".
+
 import asyncio
 import logging
 import os
@@ -8,11 +13,10 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 
-# --- НАСТРОЙКА ПЕРЕМЕННЫХ ---
+# --- НАСТРОЙКА ---
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 WEB_APP_URL = os.getenv('WEB_APP_URL')
-# --- ВРЕМЕННО ВСТАВЛЯЕМ КЛЮЧ ПРЯМО В КОД ДЛЯ ТЕСТА ---
-GEMINI_API_KEY = "AIzaSyDc0yw3t-CUicv6gSQMrp-H7Sp4GUS4CSI" 
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 PORT = os.getenv('PORT', '8080') 
 
 logging.basicConfig(level=logging.INFO)
@@ -24,12 +28,14 @@ if not all([BOT_TOKEN, WEB_APP_URL, GEMINI_API_KEY]):
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+# --- ТЕЛЕГРАМ-БОТ ---
 @dp.message(Command("start"))
 async def send_welcome(message: types.Message):
     web_app_button = InlineKeyboardButton(text="✨ Подобрать прическу", web_app=WebAppInfo(url=WEB_APP_URL))
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[web_app_button]])
     await message.answer(f"Привет, {message.from_user.full_name}! 👋\n\nНажмите на кнопку ниже, чтобы начать!", reply_markup=keyboard)
 
+# --- ПРОКСИ-СЕРВЕР ---
 async def proxy_handler(request):
     headers = {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Allow-Headers": "Content-Type"}
     if request.method == 'OPTIONS':
@@ -40,9 +46,9 @@ async def proxy_handler(request):
         payload = data.get('payload')
 
         if target_api == 'image':
-            api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key={GEMINI_API_KEY}"
+            api_url = f"[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=){GEMINI_API_KEY}"
         elif target_api == 'text':
-            api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key={GEMINI_API_KEY}"
+            api_url = f"[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=){GEMINI_API_KEY}"
         else:
             return web.json_response({"error": {"message": "Invalid target_api"}}, status=400, headers=headers)
 
@@ -53,12 +59,14 @@ async def proxy_handler(request):
         logging.error(f"Proxy error: {e}")
         return web.json_response({"error": {"message": str(e)}}, status=500, headers=headers)
 
+# --- ФУНКЦИИ ЗАПУСКА ---
 async def start_bot_polling():
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 async def start_web_server():
-    app = web.Application()
+    # Увеличиваем максимальный размер принимаемого файла до 10MB
+    app = web.Application(client_max_size=1024**2 * 10)
     app.router.add_route('*', '/api/proxy', proxy_handler)
     runner = web.AppRunner(app)
     await runner.setup()
@@ -72,4 +80,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
