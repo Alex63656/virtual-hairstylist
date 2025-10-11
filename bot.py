@@ -1,3 +1,8 @@
+# --- НАСТРОЙКА ПЕРЕМЕННЫХ ---
+BOT_TOKEN = os.getenv('BOT_TOKEN')
+WEB_APP_URL = os.getenv('WEB_APP_URL')
+GEMINI_API_KEY = os.getenv('AIzaSyDc0yw3t-CUicv6gSQMrp-H7Sp4GUS4CSI')
+PORT = os.getenv('PORT', '8080') 
 import asyncio
 import logging
 import os
@@ -80,3 +85,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
