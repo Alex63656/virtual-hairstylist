@@ -1,31 +1,18 @@
-# --- НАСТРОЙКА ПЕРЕМЕННЫХ ---
-BOT_TOKEN = os.getenv('BOT_TOKEN')
-WEB_APP_URL = os.getenv('WEB_APP_URL')
-GEMINI_API_KEY = os.getenv('AIzaSyDc0yw3t-CUicv6gSQMrp-H7Sp4GUS4CSI')
-PORT = os.getenv('PORT', '8080') 
 import asyncio
 import logging
 import os
 import aiohttp
 from aiohttp import web
 
-# --- ДИАГНОСТИЧЕСКИЙ БЛОК ---
-# Этот код выполнится в самом начале и покажет нам, какие переменные видит бот
-print("--- ЗАПУСК ДИАГНОСТИКИ ---")
-print("BOT_TOKEN:", os.getenv("BOT_TOKEN"))
-print("WEB_APP_URL:", os.getenv("WEB_APP_URL"))
-print("GEMINI_API_KEY:", os.getenv("GEMINI_API_KEY"))
-print("--- КОНЕЦ ДИАГНОСТИКИ ---")
-# -----------------------------
-
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 
-# --- НАСТРОЙКА ---
+# --- НАСТРОЙКА ПЕРЕМЕННЫХ ---
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 WEB_APP_URL = os.getenv('WEB_APP_URL')
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+# --- ВРЕМЕННО ВСТАВЛЯЕМ КЛЮЧ ПРЯМО В КОД ДЛЯ ТЕСТА ---
+GEMINI_API_KEY = "AIzaSyDc0yw3t-CUicv6gSQMrp-H7Sp4GUS4CSI" 
 PORT = os.getenv('PORT', '8080') 
 
 logging.basicConfig(level=logging.INFO)
@@ -53,9 +40,9 @@ async def proxy_handler(request):
         payload = data.get('payload')
 
         if target_api == 'image':
-            api_url = f"[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=){GEMINI_API_KEY}"
+            api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key={GEMINI_API_KEY}"
         elif target_api == 'text':
-            api_url = f"[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=){GEMINI_API_KEY}"
+            api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key={GEMINI_API_KEY}"
         else:
             return web.json_response({"error": {"message": "Invalid target_api"}}, status=400, headers=headers)
 
