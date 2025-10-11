@@ -69,7 +69,15 @@
                 showErrorModal(message) {
                     this.loading = false;
                     this.openModal(message, 'Ошибка', 'text');
-                },
+                }, resetAll() {
+    this.clientPhoto = { file: null, preview: null };
+    this.stylePhoto = { file: null, preview: null };
+    this.generatedImage = { preview: null };
+    this.prompt = '';
+    // Очищаем значения инпутов для надежности
+    this.$refs.clientPhotoInput.value = '';
+    this.$refs.stylePhotoInput.value = '';
+},
                 
                 createAnimation() {
                     this.openModal('', 'Анимация До/После', 'animation');
@@ -225,6 +233,9 @@
                 <span x-show="!loading">Сгенерировать образ</span>
                 <span x-show="loading">Создание...</span>
             </button>
+            <button @click="resetAll()" class="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition">
+    СБРОС
+</button>
         </div>
 
         <div class="glass-effect rounded-2xl p-6 space-y-6 mt-8">
@@ -275,3 +286,4 @@
 
 </body>
 </html>
+
