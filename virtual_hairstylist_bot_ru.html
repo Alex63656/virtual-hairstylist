@@ -69,16 +69,17 @@
                 showErrorModal(message) {
                     this.loading = false;
                     this.openModal(message, 'Ошибка', 'text');
-                }, resetAll() {
-    this.clientPhoto = { file: null, preview: null };
-    this.stylePhoto = { file: null, preview: null };
-    this.generatedImage = { preview: null };
-    this.prompt = '';
-    // Очищаем значения инпутов для надежности
-    this.$refs.clientPhotoInput.value = '';
-    this.$refs.stylePhotoInput.value = '';
-},
+                },
                 
+                resetAll() {
+                    this.clientPhoto = { file: null, preview: null };
+                    this.stylePhoto = { file: null, preview: null };
+                    this.generatedImage = { preview: null };
+                    this.prompt = '';
+                    this.$refs.clientPhotoInput.value = '';
+                    this.$refs.stylePhotoInput.value = '';
+                },
+
                 createAnimation() {
                     this.openModal('', 'Анимация До/После', 'animation');
                 },
@@ -89,8 +90,7 @@
 
                 async callProxy(targetApi, payload) {
                     this.loading = true;
-                    // !!! ВАШ АДРЕС УЖЕ ВСТАВЛЕН !!!
-                    const proxyUrl = 'virtual-hairstylist-production.up.railway.app'; 
+                    const proxyUrl = 'https://virtual-hairstylist-production.up.railway.app'; 
 
                     try {
                         const response = await fetch(`${proxyUrl}/api/proxy`, {
@@ -190,95 +190,45 @@
             <div>
                 <h3 class="text-lg font-semibold mb-3 border-b-2 border-purple-500 pb-2">1. Загрузите ваше фото</h3>
                 <div @dragover.prevent @drop.prevent="handleFileDrop($event, 'clientPhoto')" class="image-container relative bg-gray-800 rounded-lg h-64 flex items-center justify-center border-2 border-dashed border-gray-600 hover:border-purple-500 transition-colors cursor-pointer" @click="$refs.clientPhotoInput.click()">
-                    <template x-if="!clientPhoto.preview">
-                        <div class="text-center text-gray-400 placeholder">
-                            <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                            <p class="mt-2">Нажмите или перетащите фото</p>
-                        </div>
-                    </template>
-                    <template x-if="clientPhoto.preview">
-                        <img :src="clientPhoto.preview" alt="Фото клиента" class="rounded-lg h-full w-full" @click.stop="openModal(clientPhoto.preview)">
-                    </template>
+                    <template x-if="!clientPhoto.preview"><div class="text-center text-gray-400 placeholder"><svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><p class="mt-2">Нажмите или перетащите фото</p></div></template>
+                    <template x-if="clientPhoto.preview"><img :src="clientPhoto.preview" alt="Фото клиента" class="rounded-lg h-full w-full" @click.stop="openModal(clientPhoto.preview)"></template>
                 </div>
                 <input type="file" x-ref="clientPhotoInput" @change="handleFileSelect($event, 'clientPhoto')" accept="image/*" class="hidden">
-                <button x-show="clientPhoto.preview" @click="getHairstyleSuggestions()" :disabled="loading" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center">
-                    <svg x-show="!loading" class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.572L16.5 21.75l-.398-1.178a3.375 3.375 0 00-2.456-2.456L12.5 18l1.178-.398a3.375 3.375 0 002.456-2.456L16.5 14.25l.398 1.178a3.375 3.375 0 002.456 2.456L20.5 18l-1.178.398a3.375 3.375 0 00-2.456 2.456z" /></svg>
-                    <span x-text="loading ? 'Анализ...' : '✨ Подобрать прическу по фото'"></span>
-                </button>
+                <button x-show="clientPhoto.preview" @click="getHairstyleSuggestions()" :disabled="loading" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center"><svg x-show="!loading" class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.572L16.5 21.75l-.398-1.178a3.375 3.375 0 00-2.456-2.456L12.5 18l1.178-.398a3.375 3.375 0 002.456-2.456L16.5 14.25l.398 1.178a3.375 3.375 0 002.456 2.456L20.5 18l-1.178.398a3.375 3.375 0 00-2.456 2.456z" /></svg><span x-text="loading ? 'Анализ...' : '✨ Подобрать прическу по фото'"></span></button>
             </div>
-
             <div>
                 <h3 class="text-lg font-semibold mb-3 border-b-2 border-purple-500 pb-2">2. Опишите или покажите прическу</h3>
                 <textarea x-model="prompt" rows="3" class="w-full bg-gray-800 border-2 border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition" placeholder="Например: длинные волнистые волосы медного цвета..."></textarea>
                 <p class="text-center text-gray-400 my-2">-- ИЛИ --</p>
                 <div @dragover.prevent @drop.prevent="handleFileDrop($event, 'stylePhoto')" class="image-container relative bg-gray-800 rounded-lg h-48 flex items-center justify-center border-2 border-dashed border-gray-600 hover:border-purple-500 transition-colors cursor-pointer" @click="$refs.stylePhotoInput.click()">
-                    <template x-if="!stylePhoto.preview">
-                        <div class="text-center text-gray-400 placeholder">
-                            <svg class="w-10 h-10 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-4-4V6a4 4 0 014-4h10a4 4 0 014 4v6a4 4 0 01-4 4H7z M7 16v-8m0 8a2 2 0 100-4 2 2 0 000 4z"/></svg>
-                            <p class="mt-2">Загрузите фото-пример</p>
-                        </div>
-                    </template>
-                    <template x-if="stylePhoto.preview">
-                        <img :src="stylePhoto.preview" alt="Фото прически" class="rounded-lg h-full w-full" @click.stop="openModal(stylePhoto.preview)">
-                    </template>
+                    <template x-if="!stylePhoto.preview"><div class="text-center text-gray-400 placeholder"><svg class="w-10 h-10 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-4-4V6a4 4 0 014-4h10a4 4 0 014 4v6a4 4 0 01-4 4H7z M7 16v-8m0 8a2 2 0 100-4 2 2 0 000 4z"/></svg><p class="mt-2">Загрузите фото-пример</p></div></template>
+                    <template x-if="stylePhoto.preview"><img :src="stylePhoto.preview" alt="Фото прически" class="rounded-lg h-full w-full" @click.stop="openModal(stylePhoto.preview)"></template>
                 </div>
                 <input type="file" x-ref="stylePhotoInput" @change="handleFileSelect($event, 'stylePhoto')" accept="image/*" class="hidden">
-                <button x-show="stylePhoto.preview" @click="describeHairstyle()" :disabled="loading" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center">
-                    <svg x-show="!loading" class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 6.75h17.25M3.375 12h17.25M3.375 17.25h17.25" /></svg>
-                    <span x-text="loading ? 'Описание...' : '✨ Описать прическу с фото'"></span>
-                </button>
+                <button x-show="stylePhoto.preview" @click="describeHairstyle()" :disabled="loading" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center"><svg x-show="!loading" class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.375 6.75h17.25M3.375 12h17.25M3.375 17.25h17.25" /></svg><span x-text="loading ? 'Описание...' : '✨ Описать прическу с фото'"></span></button>
             </div>
-            
-            <button @click="generateImage(false)" :disabled="loading || !clientPhoto.file || (!prompt && !stylePhoto.file)" class="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white font-bold py-3 px-4 rounded-lg text-lg transition transform hover:scale-105">
-                <span x-show="!loading">Сгенерировать образ</span>
-                <span x-show="loading">Создание...</span>
-            </button>
-            <button @click="resetAll()" class="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition">
-    СБРОС
-</button>
+            <button @click="generateImage(false)" :disabled="loading || !clientPhoto.file || (!prompt && !stylePhoto.file)" class="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white font-bold py-3 px-4 rounded-lg text-lg transition transform hover:scale-105"><span x-show="!loading">Сгенерировать образ</span><span x-show="loading">Создание...</span></button>
+            <button @click="resetAll()" class="w-full mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition">СБРОС</button>
         </div>
-
-        <div class="glass-effect rounded-2xl p-6 space-y-6 mt-8">
+        <div class="glass-effect rounded-2xl p-6 space-y-6">
             <h3 class="text-lg font-semibold mb-3 border-b-2 border-purple-500 pb-2">3. Результат</h3>
             <div class="image-container relative bg-gray-800 rounded-lg h-64 flex items-center justify-center border-2 border-gray-700">
-                <template x-if="!loading && !generatedImage.preview">
-                    <div class="text-center text-gray-400">
-                        <svg class="w-12 h-12 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.82m5.84-2.56a12.022 12.022 0 01-11.68 0 6 6 0 1111.68 0z" /></svg>
-                        <p class="mt-2">Здесь появится ваша новая прическа</p>
-                    </div>
-                </template>
-                <div x-show="loading" class="flex flex-col items-center justify-center">
-                    <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24 mb-4"></div>
-                    <p class="text-lg text-gray-300" x-text="statusText"></p>
-                </div>
-                <template x-if="generatedImage.preview">
-                    <img :src="generatedImage.preview" alt="Сгенерированное изображение" class="rounded-lg h-full w-full" @click.stop="openModal(generatedImage.preview)">
-                </template>
+                <template x-if="!loading && !generatedImage.preview"><div class="text-center text-gray-400"><svg class="w-12 h-12 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.82m5.84-2.56a12.022 12.022 0 01-11.68 0 6 6 0 1111.68 0z" /></svg><p class="mt-2">Здесь появится ваша новая прическа</p></div></template>
+                <div x-show="loading" class="flex flex-col items-center justify-center"><div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24 mb-4"></div><p class="text-lg text-gray-300" x-text="statusText"></p></div>
+                <template x-if="generatedImage.preview"><img :src="generatedImage.preview" alt="Сгенерированное изображение" class="rounded-lg h-full w-full" @click.stop="openModal(generatedImage.preview)"></template>
             </div>
-            
             <div class="grid grid-cols-2 gap-4" x-show="generatedImage.preview">
-                <button @click="generateImage(true)" :disabled="loading" class="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                    Улучшить качество
-                </button>
-                <button @click="createAnimation()" :disabled="loading" class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    Анимация До/После
-                </button>
+                <button @click="generateImage(true)" :disabled="loading" class="w-full bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center"><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Улучшить качество</button>
+                <button @click="createAnimation()" :disabled="loading" class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center"><svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>Анимация До/После</button>
             </div>
         </div>
     </div>
-
     <div x-show="modal.visible" x-cloak class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50" @click="closeModal()">
         <div class="bg-gray-800 rounded-2xl shadow-lg max-w-lg w-full p-6 text-center modal-image-animation" @click.stop>
             <h3 class="text-2xl font-bold mb-4" x-text="modal.title"></h3>
-            <div x-show="modal.type === 'image'" class="mb-4">
-                 <img :src="modal.content" class="max-w-full max-h-[70vh] rounded-lg mx-auto">
-            </div>
-            <div x-show="modal.type === 'animation'" class="mb-4 relative w-full" style="padding-bottom: 100%;">
-                 <img :src="animation.isOriginal ? clientPhoto.preview : generatedImage.preview" class="absolute top-0 left-0 w-full h-full object-cover rounded-lg">
-            </div>
-             <div x-show="modal.type === 'text'" class="mb-4 text-left text-gray-300 whitespace-pre-wrap max-h-[60vh] overflow-y-auto" x-html="modal.content"></div>
+            <div x-show="modal.type === 'image'" class="mb-4"><img :src="modal.content" class="max-w-full max-h-[70vh] rounded-lg mx-auto"></div>
+            <div x-show="modal.type === 'animation'" class="mb-4 relative w-full" style="padding-bottom: 100%;"><img :src="animation.isOriginal ? clientPhoto.preview : generatedImage.preview" class="absolute top-0 left-0 w-full h-full object-cover rounded-lg"></div>
+            <div x-show="modal.type === 'text'" class="mb-4 text-left text-gray-300 whitespace-pre-wrap max-h-[60vh] overflow-y-auto" x-html="modal.content"></div>
             <button @click="closeModal()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg transition">Закрыть</button>
         </div>
     </div>
@@ -286,5 +236,3 @@
 
 </body>
 </html>
-
-
