@@ -8,6 +8,16 @@ import logging
 import os
 import aiohttp
 from aiohttp import web
+import asyncio
+import logging
+import os
+import re
+import signal
+from typing import Optional
+from urllib.parse import unquote
+
+import aiohttp
+from aiohttp import web
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command
@@ -17,6 +27,38 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 WEB_APP_URL = os.getenv('WEB_APP_URL')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+RAW_GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+
+
+def _sanitize_gemini_key(raw_key: Optional[str]) -> str:
+    """Возвращает аккуратный API-ключ даже если переменная заполнена неаккуратно."""
+    if not raw_key:
+        return ""
+
+    raw_key = raw_key.strip()
+
+    decoded_key = unquote(raw_key)
+
+    candidates = []
+    for value in (raw_key, decoded_key):
+        if value and value not in candidates:
+            candidates.append(value)
+
+    for candidate in candidates:
+        match = re.search(r"AIza[0-9A-Za-z_\-]{30,}", candidate)
+        if match:
+            cleaned_key = match.group(0)
+            if cleaned_key != raw_key:
+                logging.warning(
+                    "Переменная GEMINI_API_KEY содержала лишние символы. Используем аккуратный ключ: %s...",
+                    cleaned_key[:8],
+                )
+            return cleaned_key
+
+    return raw_key
+
+
+GEMINI_API_KEY = _sanitize_gemini_key(RAW_GEMINI_API_KEY)
 PORT = os.getenv('PORT', '8080') 
 
 logging.basicConfig(level=logging.INFO)
@@ -49,6 +91,18 @@ async def proxy_handler(request):
             api_url = f"[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=){GEMINI_API_KEY}"
         elif target_api == 'text':
             api_url = f"[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=){GEMINI_API_KEY}"
+        if target_api == 'image':
+            api_url = (
+                "https://generativelanguage.googleapis.com/v1beta/models/"
+                "gemini-2.5-flash-image-preview:generateContent"
+                f"?key={GEMINI_API_KEY}"
+            )
+        elif target_api == 'text':
+            api_url = (
+                "https://generativelanguage.googleapis.com/v1beta/models/"
+                "gemini-2.5-flash-preview-05-20:generateContent"
+                f"?key={GEMINI_API_KEY}"
+            )
         else:
             return web.json_response({"error": {"message": "Invalid target_api"}}, status=400, headers=headers)
 
@@ -77,6 +131,56 @@ async def start_web_server():
 
 async def main():
     await asyncio.gather(start_bot_polling(), start_web_server())
+async def start_bot_polling():
+    try:
+        await bot.delete_webhook(drop_pending_updates=True)
+        await dp.start_polling(bot)
+    except asyncio.CancelledError:
+        logging.info("Остановка Telegram-бота...")
+        raise
+    finally:
+        await bot.session.close()
+
+async def start_web_server(stop_event: asyncio.Event):
+    # Увеличиваем максимальный размер принимаемого файла до 10MB
+    app = web.Application(client_max_size=1024**2 * 10)
+    app.router.add_route('*', '/api/proxy', proxy_handler)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', int(PORT))
+    await site.start()
+    logging.info(f"--> Веб-сервер (прокси) запущен на порту {PORT}")
+    try:
+        await stop_event.wait()
+    finally:
+        logging.info("Остановка веб-сервера (прокси)...")
+        await runner.cleanup()
+
+async def main():
+    loop = asyncio.get_running_loop()
+    stop_event = asyncio.Event()
+
+    def _handle_shutdown(sig: signal.Signals):
+        logging.warning(f"Получен сигнал {sig.name}. Инициирована корректная остановка сервиса...")
+        stop_event.set()
+
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(sig, _handle_shutdown, sig)
+        except NotImplementedError:
+            # На платформах без поддержки сигналов (например, Windows) просто игнорируем
+            logging.debug("Регистрация обработчика сигналов не поддерживается на этой платформе")
+
+    bot_task = asyncio.create_task(start_bot_polling())
+    web_task = asyncio.create_task(start_web_server(stop_event))
+
+    await stop_event.wait()
+
+    for task in (bot_task, web_task):
+        task.cancel()
+
+    await asyncio.gather(bot_task, web_task, return_exceptions=True)
+    logging.info("Сервис завершил работу корректно.")
 
 if __name__ == "__main__":
     asyncio.run(main())
