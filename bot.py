@@ -1,8 +1,3 @@
-# Объяснение кода:
-# Единственное изменение здесь - это строка 'app = web.Application(client_max_size=1024**2 * 10)'.
-# Она увеличивает максимальный размер принимаемых файлов до 10 мегабайт,
-# что решает проблему "Content Too Large".
-
 import asyncio
 import logging
 import os
@@ -13,8 +8,9 @@ import logging
 import os
 import re
 import signal
-from typing import Optional
-from urllib.parse import unquote
+from collections import deque
+from typing import Iterable, Optional
+from urllib.parse import parse_qs, unquote, urlparse
 
 import aiohttp
 from aiohttp import web
@@ -30,6 +26,46 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 RAW_GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 
+def _iter_key_candidates(raw: str) -> Iterable[str]:
+    """Перебираем все кусочки, где потенциально может прятаться API-ключ."""
+
+    queue: deque[str] = deque()
+    seen: set[str] = set()
+
+    def _push(value: Optional[str]) -> None:
+        if not value:
+            return
+        value = value.strip()
+        if not value or value in seen:
+            return
+        seen.add(value)
+        queue.append(value)
+
+    _push(raw)
+
+    while queue:
+        current = queue.popleft()
+        yield current
+
+        # Markdown ссылку вида [текст](https://...key=AIza...) превращаем в саму ссылку
+        for markdown_url in re.findall(r"\((https?://[^)]+)\)", current):
+            _push(markdown_url)
+
+        # Если встретилась ссылка, разбираем query-параметры и фрагменты
+        if '://' in current:
+            parsed = urlparse(current)
+            for component in (parsed.path, parsed.fragment):
+                _push(component)
+            query_params = parse_qs(parsed.query)
+            for values in query_params.values():
+                for value in values:
+                    _push(value)
+
+        # Раскладываем строку по неалфавитно-цифровым символам — так вылавливаем "key=AIza" и т.п.
+        for token in re.split(r"[^0-9A-Za-z_\-]+", current):
+            _push(token)
+
+
 def _sanitize_gemini_key(raw_key: Optional[str]) -> str:
     """Возвращает аккуратный API-ключ даже если переменная заполнена неаккуратно."""
     if not raw_key:
@@ -37,14 +73,10 @@ def _sanitize_gemini_key(raw_key: Optional[str]) -> str:
 
     raw_key = raw_key.strip()
 
-    decoded_key = unquote(raw_key)
+    candidates = list(_iter_key_candidates(raw_key))
+    decoded_candidates = list(_iter_key_candidates(unquote(raw_key)))
 
-    candidates = []
-    for value in (raw_key, decoded_key):
-        if value and value not in candidates:
-            candidates.append(value)
-
-    for candidate in candidates:
+    for candidate in candidates + decoded_candidates:
         match = re.search(r"AIza[0-9A-Za-z_\-]{30,}", candidate)
         if match:
             cleaned_key = match.group(0)
@@ -59,6 +91,11 @@ def _sanitize_gemini_key(raw_key: Optional[str]) -> str:
 
 
 GEMINI_API_KEY = _sanitize_gemini_key(RAW_GEMINI_API_KEY)
+if not GEMINI_API_KEY.startswith("AIza"):
+    logging.critical(
+        "GEMINI_API_KEY не похож на ключ Google (ожидаем начало 'AIza'). Проверьте значение переменной."
+    )
+    exit()
 PORT = os.getenv('PORT', '8080') 
 
 logging.basicConfig(level=logging.INFO)
@@ -91,23 +128,29 @@ async def proxy_handler(request):
             api_url = f"[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=){GEMINI_API_KEY}"
         elif target_api == 'text':
             api_url = f"[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=){GEMINI_API_KEY}"
-        if target_api == 'image':
-            api_url = (
-                "https://generativelanguage.googleapis.com/v1beta/models/"
-                "gemini-2.5-flash-image-preview:generateContent"
-                f"?key={GEMINI_API_KEY}"
-            )
-        elif target_api == 'text':
-            api_url = (
-                "https://generativelanguage.googleapis.com/v1beta/models/"
-                "gemini-2.5-flash-preview-05-20:generateContent"
-                f"?key={GEMINI_API_KEY}"
-            )
         else:
             return web.json_response({"error": {"message": "Invalid target_api"}}, status=400, headers=headers)
 
         async with aiohttp.ClientSession() as session:
             async with session.post(api_url, json=payload) as resp:
+                return web.json_response(await resp.json(), status=resp.status, headers=headers)
+        if target_api == 'image':
+            api_url = (
+                "https://generativelanguage.googleapis.com/v1beta/models/"
+                "gemini-2.5-flash-image-preview:generateContent"
+            )
+        elif target_api == 'text':
+            api_url = (
+                "https://generativelanguage.googleapis.com/v1beta/models/"
+                "gemini-2.5-flash-preview-05-20:generateContent"
+            )
+        else:
+            return web.json_response({"error": {"message": "Invalid target_api"}}, status=400, headers=headers)
+
+        request_headers = {"x-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json"}
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(api_url, json=payload, params={"key": GEMINI_API_KEY}, headers=request_headers) as resp:
                 return web.json_response(await resp.json(), status=resp.status, headers=headers)
     except Exception as e:
         logging.error(f"Proxy error: {e}")
