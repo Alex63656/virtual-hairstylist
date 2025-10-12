@@ -111,12 +111,22 @@
                         this.showErrorModal(`Вы исчерпали лимит бесплатных генераций (${this.maxGenerations}). Введите промокод, чтобы продолжить.`);
                         return;
                     }
-                    this.statusText = isUpscale ? 'Улучшаем качество...' : 'Создаем новый образ...';
-                    let userPrompt = this.prompt || "новая прическа";
-                    if (isUpscale) { userPrompt = "улучшить качество, высокая детализация, 4k. " + userPrompt; }
-                    const systemPrompt = "ТЫ — ПРОФЕССИОНАЛЬНЫЙ ФОТОРЕАЛИСТИЧНЫЙ AI-ПАРИКМАХЕР. ТВОЯ ГЛАВНАЯ ЗАДАЧА: ПОЛНОСТЬЮ ЗАМЕНИТЬ старую прическу на новую, а не накладывать поверх. ИНСТРУКЦИИ: 1. **УДАЛИ** все видимые части старых волос. 2. Создай новую прическу согласно запросу клиента. 3. **АБСОЛЮТНОЕ ТРЕБОВАНИЕ:** Лицо, черты лица, выражение лица, кожа, одежда и фон ДОЛЖНЫ ОСТАВАТЬСЯ ПОЛНОСТЬЮ НЕИЗМЕННЫМИ. Изменяются **ТОЛЬКО ВОЛОСЫ**. 4. Результат должен быть фотореалистичным и соответствовать стилю оригинальной фотографии.";
-                    const payload = { contents: [{ parts: [ { text: systemPrompt }, { text: `ЗАПРОС КЛИЕНТА: ${userPrompt}` }, { inlineData: { mimeType: "image/jpeg", data: this.clientPhoto.file } } ] }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }, };
-                    if (this.stylePhoto.file) { payload.contents[0].parts.push({ text: "ИСПОЛЬЗУЙ ЭТО ФОТО КАК ОБРАЗЕЦ СТИЛЯ ПРИЧЕСКИ:" }); payload.contents[0].parts.push({ inlineData: { mimeType: "image/jpeg", data: this.stylePhoto.file } }); }
+                    this.statusText = isUpscale ? 'Improving quality...' : 'Generating new look...';
+                    let userPrompt = this.prompt || "a new hairstyle";
+                    if (isUpscale) { userPrompt = "improve quality, high detail, 4k. " + userPrompt; }
+                    
+                    const systemPrompt = `You are an expert photorealistic AI hairstylist. Your task is to meticulously replace the hair on a person's photo according to a user's request.
+                    PRIMARY DIRECTIVE: First, digitally REMOVE the original hair completely. Then, render the NEW hairstyle. This is crucial to avoid layering new hair on top of old hair.
+                    ABSOLUTE REQUIREMENT: The face, facial features, expression, skin, clothing, and background MUST remain COMPLETELY UNCHANGED. Only the hair (style, color, length) should be modified.
+                    Maintain the original photo's quality, lighting, and style. The result must be photorealistic.`;
+                    
+                    const payload = { contents: [{ parts: [ { text: systemPrompt }, { text: `CLIENT REQUEST: ${userPrompt}` }, { inlineData: { mimeType: "image/jpeg", data: this.clientPhoto.file } } ] }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }, };
+                    
+                    if (this.stylePhoto.file) { 
+                        payload.contents[0].parts.push({ text: "USE THIS PHOTO AS A STYLE REFERENCE FOR THE HAIRSTYLE. Match the color, length, texture, and style as closely as possible:" }); 
+                        payload.contents[0].parts.push({ inlineData: { mimeType: "image/jpeg", data: this.stylePhoto.file } }); 
+                    }
+
                     const result = await this.callProxy('image', payload);
                     if (result) {
                         const base64Data = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
@@ -127,7 +137,7 @@
                                 localStorage.setItem('generationCount_v2', this.generationCount);
                             }
                         } 
-                        else { const errorMessage = result?.error?.message || 'Ответ от AI не содержит изображения.'; this.showErrorModal(errorMessage); }
+                        else { const errorMessage = result?.error?.message || 'The AI response did not contain an image.'; this.showErrorModal(errorMessage); }
                     }
                 },
                 async callLLM(systemPrompt, userPrompt, imageFile = null) {
@@ -139,13 +149,13 @@
                     return null;
                 },
                 async getHairstyleSuggestions() {
-                    const systemPrompt = "Ты - опытный парикмахер-стилист. Проанализируй фото клиента и кратко, списком (используя *), предложи 3-4 варианта стрижек или причесок, которые подойдут к его типу лица. Говори на русском языке.";
+                    const systemPrompt = "You are an expert hairstylist. Analyze the client's photo and briefly, in a list format (using *), suggest 3-4 haircuts or styles that would suit their face shape. Respond in Russian.";
                     const userPrompt = "Посоветуй, какие прически мне подойдут?";
                     const result = await this.callLLM(systemPrompt, userPrompt, this.clientPhoto.file);
                     if (result) { this.openModal(result.replace(/\*/g, '•'), 'Рекомендации по прическам', 'text'); }
                 },
                 async describeHairstyle() {
-                    const systemPrompt = "Ты - профессиональный парикмахер. Опиши прическу на фото. Укажи тип стрижки, длину, цвет, укладку. Будь краток и точен. Говори на русском языке.";
+                    const systemPrompt = "You are a professional hairstylist. Describe the hairstyle in the photo. Specify the cut type, length, color, and styling. Be brief and precise. Respond in Russian.";
                     const userPrompt = "Опиши эту прическу.";
                     const result = await this.callLLM(systemPrompt, userPrompt, this.stylePhoto.file);
                     if (result) { this.prompt = result; }
@@ -158,6 +168,16 @@
 
 <div x-data="imageGenerator" x-init="init()" class="container mx-auto max-w-4xl p-4">
     <header class="text-center my-6"><h1 class="text-4xl md:text-5xl font-bold tracking-tight">Виртуальный Стилист <span class="text-purple-400">AI</span></h1><p class="text-gray-300 mt-2 text-lg">Примерьте новый образ за секунды</p></header>
+
+    <!-- Новый блок с рекомендациями -->
+    <div class="mb-8 glass-effect rounded-2xl p-4 text-sm text-gray-300">
+        <h4 class="font-semibold text-lg text-white mb-2 text-center">💡 Советы для лучшего результата</h4>
+        <ul class="list-disc list-inside space-y-1">
+            <li><b>Фото клиента:</b> Загружайте фото анфас, с хорошим освещением, где волосы четко видны и не перекрыты руками или предметами.</li>
+            <li><b>Фото-пример:</b> Используйте изображения, где прическа хорошо видна на модели, смотрящей прямо в камеру.</li>
+            <li><b>Описание:</b> Описание надо писать только тогда, когда нет фото-примера! Будьте конкретны. Указывайте цвет, длину, наличие челки и тип укладки (например, 'длинные прямые платиновые волосы с челкой').</li>
+        </ul>
+    </div>
 
     <div x-show="!isPro" x-cloak class="mb-6 glass-effect rounded-2xl p-4 text-center">
         <p class="mb-2 font-semibold">Осталось бесплатных генераций: <span x-text="Math.max(0, maxGenerations - generationCount)" class="text-purple-400 text-lg"></span> / <span x-text="maxGenerations"></span></p>
