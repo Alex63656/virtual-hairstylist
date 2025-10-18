@@ -1,6 +1,6 @@
 # Объяснение кода:
-# В этой версии мы временно вставляем GEMINI_API_KEY прямо в код,
-# чтобы обойти ошибку с переменными на Railway.
+# Эта версия ищет переменную окружения с правильным именем 'API_KEY',
+# которое совпадает с тем, что настроено на Railway.
 
 import asyncio
 import logging
@@ -15,15 +15,15 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 # --- НАСТРОЙКА ---
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 WEB_APP_URL = os.getenv('WEB_APP_URL')
-# --- ВАШ КЛЮЧ УЖЕ ВСТАВЛЕН ДЛЯ ТЕСТА ---
-GEMINI_API_KEY = "AIzaSyCX-D5d5kXJrmyMZJREykCQAbx-bXqVCIk" 
-PORT = os.getenv('PORT', '8080') 
+# --- ПРАВИЛЬНОЕ ИМЯ ПЕРЕМЕННОЙ ---
+GEMINI_API_KEY = os.getenv('API_KEY') # ИЩЕМ ПЕРЕМЕННУЮ С ИМЕНЕМ 'API_KEY'
+PORT = os.getenv('PORT', '8080')
 
 logging.basicConfig(level=logging.INFO)
 
-# Убираем проверку GEMINI_API_KEY, так как мы вставили его вручную
-if not all([BOT_TOKEN, WEB_APP_URL]):
-    logging.critical("!!! ОШИБКА: Одна или несколько переменных (BOT_TOKEN, WEB_APP_URL) не найдены!")
+# Теперь проверка GEMINI_API_KEY снова важна!
+if not all([BOT_TOKEN, WEB_APP_URL, GEMINI_API_KEY]):
+    logging.critical("!!! ОШИБКА: Одна или несколько переменных (BOT_TOKEN, WEB_APP_URL, API_KEY) не найдены!")
     exit()
 
 bot = Bot(token=BOT_TOKEN)
@@ -44,16 +44,21 @@ async def proxy_handler(request):
         target_api = data.get('target_api')
         payload = data.get('payload')
 
+        # Используем актуальные модели, которые ожидает фронтенд
         if target_api == 'image':
             api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key={GEMINI_API_KEY}"
         elif target_api == 'text':
-            api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key={GEMINI_API_KEY}"
+            # Заменил старую модель на новую
+            api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
         else:
             return web.json_response({"error": {"message": "Invalid target_api"}}, status=400, headers=headers)
 
         async with aiohttp.ClientSession() as session:
             async with session.post(api_url, json=payload) as resp:
-                return web.json_response(await resp.json(), status=resp.status, headers=headers)
+                response_json = await resp.json()
+                # Логируем ответ от Google для отладки
+                logging.info(f"Response from Gemini API (status {resp.status}): {response_json}")
+                return web.json_response(response_json, status=resp.status, headers=headers)
     except Exception as e:
         logging.error(f"Proxy error: {e}")
         return web.json_response({"error": {"message": str(e)}}, status=500, headers=headers)
