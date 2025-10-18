@@ -15,8 +15,8 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 # --- НАСТРОЙКА ---
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 WEB_APP_URL = os.getenv('WEB_APP_URL')
-# --- ПРАВИЛЬНОЕ ИМЯ ПЕРЕМЕННОЙ ---
-GEMINI_API_KEY = os.getenv('API_KEY') # ИЩЕМ ПЕРЕМЕННУЮ С ИМЕНЕМ 'API_KEY'
+# --- ВАШ КЛЮЧ УЖЕ ВСТАВЛЕН ---
+GEMINI_API_KEY = "AIzaSyCX-D5d5kXJrmyMZJREykCQAbx-bXqVCIk" # <--- ВАШ КЛЮЧ ЗДЕСЬ
 PORT = os.getenv('PORT', '8080')
 
 logging.basicConfig(level=logging.INFO)
@@ -81,4 +81,5 @@ async def main():
     await asyncio.gather(start_bot_polling(), start_web_server())
 
 if __name__ == "__main__":
+
     asyncio.run(main())
