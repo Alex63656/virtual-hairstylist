@@ -10,7 +10,7 @@
         body { font-family: 'Inter', sans-serif; touch-action: manipulation; }
         .loader { border-top-color: #3498db; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .glass-effect { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .glass-effect { background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.5); color: #3f3a2f; }
         .animated-gradient { background-size: 200% 200%; animation: gradient-animation 10s ease infinite; }
         @keyframes gradient-animation { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         .image-container img { object-fit: contain; } 
@@ -164,14 +164,14 @@
         });
     </script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen antialiased animated-gradient bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+<body class="bg-[#f8f1e3] text-[#3f3a2f] min-h-screen antialiased bg-gradient-to-br from-[#f8f1e3] via-[#e5d4b8] to-[#c6a982]">
 
 <div x-data="imageGenerator" x-init="init()" class="container mx-auto max-w-4xl p-4">
-    <header class="text-center my-6"><h1 class="text-4xl md:text-5xl font-bold tracking-tight">Виртуальный Стилист <span class="text-purple-400">AI</span></h1><p class="text-gray-300 mt-2 text-lg">Примерьте новый образ за секунды</p></header>
+    <header class="text-center my-6 text-[#3f3a2f]"><h1 class="text-4xl md:text-5xl font-bold tracking-tight">Виртуальный Стилист <span class="text-purple-500">AI</span></h1><p class="mt-2 text-lg text-[#5b4a33]">Примерьте новый образ за секунды</p></header>
 
     <!-- Новый блок с рекомендациями -->
-    <div class="mb-8 glass-effect rounded-2xl p-4 text-sm text-gray-300">
-        <h4 class="font-semibold text-lg text-white mb-2 text-center">💡 Советы для лучшего результата</h4>
+    <div class="mb-8 glass-effect rounded-2xl p-4 text-sm text-[#4a3b2a]">
+        <h4 class="font-semibold text-lg text-[#3f3a2f] mb-2 text-center">💡 Советы для лучшего результата</h4>
         <ul class="list-disc list-inside space-y-1">
             <li><b>Фото клиента:</b> Загружайте фото анфас, с хорошим освещением, где волосы четко видны и не перекрыты руками или предметами.</li>
             <li><b>Фото-пример:</b> Используйте изображения, где прическа хорошо видна на модели, смотрящей прямо в камеру.</li>
