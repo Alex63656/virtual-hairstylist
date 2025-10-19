@@ -101,7 +101,12 @@ def handle_proxy():
             if not image_generation_model:
                 return jsonify({"error": "Модель генерации изображений не инициализирована."}), 500
             
-            response = image_generation_model.generate_content(gemini_parts)
+        response = image_generation_model.generate_content(
+    gemini_parts,
+    generation_config=genai.GenerationConfig(
+        response_modalities=["TEXT", "IMAGE"]
+    )
+)
             
             # Извлекаем сгенерированное изображение
             generated_image_b64 = None
@@ -209,7 +214,12 @@ def handle_generate():
         parts.append(prompt)
 
         # Вызов API Gemini
-        response = image_generation_model.generate_content(parts)
+       response = image_generation_model.generate_content(
+    parts,
+    generation_config=genai.GenerationConfig(
+        response_modalities=["TEXT", "IMAGE"]
+    )
+)
 
         # Извлекаем сгенерированное изображение из ответа
         generated_image_b64 = None
@@ -267,3 +277,4 @@ if __name__ == '__main__':
     # Эта часть выполняется только при локальном запуске (python bot.py).
     # На Railway используется Gunicorn из Procfile.
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)), debug=True)
+
