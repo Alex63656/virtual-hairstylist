@@ -111,7 +111,16 @@ def setup_webhook_route():
         except Exception as e:
             return jsonify({"error": str(e)})
     return jsonify({"error": "Бот не инициализирован"})
-
+@app.route('/test_webhook_route')
+def test_webhook_route():
+    """Проверяем, существует ли маршрут webhook"""
+    webhook_path = f'/bot{BOT_TOKEN}'
+    return jsonify({
+        "webhook_path": webhook_path,
+        "full_url": f"{WEBAPP_URL}{webhook_path}",
+        "bot_token_exists": BOT_TOKEN is not None,
+        "message": "Тест маршрута webhook"
+    })
 # --- Telegram Webhook ---
 # --- Telegram Webhook ---
 @app.route(f'/bot{BOT_TOKEN}', methods=['POST'])
@@ -387,4 +396,5 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     print(f"🚀 Запуск сервера на порту {port}")
     app.run(host='0.0.0.0', port=port, debug=False)
+
 
