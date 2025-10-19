@@ -10,10 +10,9 @@
     <div id="root">
         <div style="min-height: 100vh; background: linear-gradient(135deg, #3a2f26 0%, #4a3f36 20%, #5a4f46 40%, #6a5f56 60%, #7a6f66 80%, #8a7f76 100%); font-family: Inter, sans-serif; color: #f5f0e8; overflow-x: hidden;">
             
-            <!-- Заголовок с логотипом -->
+            <!-- Заголовок без логотипа -->
             <div style="text-align: center; padding: 40px 24px 32px;">
                 <div style="display: flex; flex-direction: column; align-items: center; gap: 20px; margin-bottom: 16px;">
-                    
                     <div style="text-align: center;">
                         <h1 style="font-size: 42px; font-weight: 300; margin: 0; color: #ffffff; text-shadow: 0 4px 12px rgba(0,0,0,0.5); letter-spacing: 2px; font-family: 'Inter', sans-serif;">
                             MISS SLIVKI AI
@@ -231,11 +230,18 @@
         let loading = false;
         let modal = { visible: false, title: '', content: '', type: 'text' };
         
-        // Локальное хранение
+        // Локальное хранение (БЕЗ ИСТОРИИ ИЗОБРАЖЕНИЙ)
         let generationCount = parseInt(localStorage.getItem('generationCount_v2') || '0');
         let maxGenerations = parseInt(localStorage.getItem('maxGenerations_v2') || '10');
         let isPro = localStorage.getItem('isPro_v2') === 'true';
-        let generationHistory = JSON.parse(localStorage.getItem('generationHistory_v1') || '[]');
+        let generationHistory = []; // Отключаем историю
+        
+        // Очистка localStorage при старте
+        try {
+            localStorage.removeItem('generationHistory_v1');
+        } catch (e) {
+            console.log('История очищена при старте');
+        }
         
         // Утилиты
         const fileToBase64 = (file) => {
@@ -450,9 +456,8 @@
                     localStorage.setItem('generationCount_v2', generationCount.toString());
                 }
                 
-                generationHistory.unshift(watermarkedDataUrl);
-                generationHistory = generationHistory.slice(0, 20);
-                localStorage.setItem('generationHistory_v1', JSON.stringify(generationHistory));
+                // НЕ СОХРАНЯЕМ ИСТОРИЮ ИЗОБРАЖЕНИЙ - они слишком большие
+                console.log('Генерация завершена успешно');
                 
                 updateUI();
                 
@@ -520,6 +525,13 @@
             stylePhoto = { file: null, preview: null, base64: null };
             generatedImage = { preview: null };
             
+            // Очистка localStorage при переполнении
+            try {
+                localStorage.removeItem('generationHistory_v1');
+            } catch (e) {
+                console.log('История очищена');
+            }
+            
             document.getElementById('client-photo-preview').style.display = 'none';
             document.getElementById('style-photo-preview').style.display = 'none';
             document.getElementById('result-container').style.display = 'none';
@@ -562,4 +574,3 @@
     </script>
 </body>
 </html>
-
