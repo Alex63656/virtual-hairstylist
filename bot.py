@@ -38,10 +38,6 @@ def base64_to_pil(base64_string: str) -> Image.Image:
     try:
         image_data = base64.b64decode(base64_string)
         image = Image.open(io.BytesIO(image_data))
-        # Проверяем, что изображение корректное
-        image.verify()
-        # Заново открываем для использования (verify() "ломает" изображение)
-        image = Image.open(io.BytesIO(image_data))
         return image
     except Exception as e:
         app.logger.error(f"Ошибка декодирования base64: {e}")
@@ -108,21 +104,10 @@ def handle_proxy():
             if not image_generation_model:
                 return jsonify({"error": "Модель генерации изображений не инициализирована."}), 500
             
-            # ИСПРАВЛЕНИЕ: Добавляем настройки безопасности, чтобы Gemini не блокировал ответ
-            response = image_generation_model.generate_content(
-                gemini_parts,
-                generation_config=genai.GenerationConfig(
-                    response_modalities=["TEXT", "IMAGE"]
-                ),
-                safety_settings={
-                    genai.types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
-                    genai.types.HarmCategory.HARM_CATEGORY_HATE_SPEECH: genai.types.HarmBlockThreshold.BLOCK_NONE,
-                    genai.types.HarmCategory.HARM_CATEGORY_HARASSMENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
-                    genai.types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: genai.types.HarmBlockThreshold.BLOCK_NONE,
-                }
-            )
+            # ИСПРАВЛЕНО: Убрал проблемные параметры!
+            response = image_generation_model.generate_content(gemini_parts)
             
-            # ИСПРАВЛЕНИЕ: Ищем изображение в ДВУХ возможных местах!
+            # Ищем изображение в ответе
             generated_image_b64 = None
             
             # Способ 1: В response.parts
@@ -244,21 +229,10 @@ def handle_generate():
             style_photo_pil = base64_to_pil(style_photo_b64)
             parts.append(style_photo_pil)
 
-        # Вызов API Gemini
-        response = image_generation_model.generate_content(
-            parts,
-            generation_config=genai.GenerationConfig(
-                response_modalities=["TEXT", "IMAGE"]
-            ),
-            safety_settings={
-                genai.types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
-                genai.types.HarmCategory.HARM_CATEGORY_HATE_SPEECH: genai.types.HarmBlockThreshold.BLOCK_NONE,
-                genai.types.HarmCategory.HARM_CATEGORY_HARASSMENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
-                genai.types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: genai.types.HarmBlockThreshold.BLOCK_NONE,
-            }
-        )
+        # ИСПРАВЛЕНО: Убрал проблемные параметры!
+        response = image_generation_model.generate_content(parts)
 
-        # ИСПРАВЛЕНИЕ: Ищем изображение в ДВУХ возможных местах!
+        # Ищем изображение в ответе
         generated_image_b64 = None
         
         # Способ 1: В response.parts
