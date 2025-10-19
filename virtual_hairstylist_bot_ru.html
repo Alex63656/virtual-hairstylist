@@ -85,7 +85,7 @@
 
                 async callProxy(targetApi, payload) {
                     this.loading = true;
-                    const proxyUrl = 'https://virtual-hairstylist-production.up.railway.app'; 
+                    const proxyUrl = window.location.origin;
                     try {
                         const response = await fetch(`${proxyUrl}/api/proxy`, {
                             method: 'POST',
@@ -220,3 +220,4 @@
 
 </body>
 </html>
+
