@@ -3,7 +3,7 @@ import base64
 import io
 import google.generativeai as genai
 import telebot
-from telebot.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from PIL import Image
@@ -23,9 +23,10 @@ if BOT_TOKEN:
         
         @bot.message_handler(commands=['start'])
         def start_handler(message):
-            keyboard = InlineKeyboardMarkup()
-            webapp_button = InlineKeyboardButton(
-                "✨ Подобрать прическу", 
+            # Создаем обычную клавиатуру на всю ширину
+            keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=False)
+            webapp_button = KeyboardButton(
+                text="✨ Подобрать прическу",
                 web_app=WebAppInfo(url=f"{WEBAPP_URL}/")
             )
             keyboard.add(webapp_button)
