@@ -37,10 +37,15 @@ def base64_to_pil(base64_string: str) -> Image.Image:
     
     try:
         image_data = base64.b64decode(base64_string)
-        return Image.open(io.BytesIO(image_data))
+        image = Image.open(io.BytesIO(image_data))
+        # Проверяем, что изображение корректное
+        image.verify()
+        # Заново открываем для использования (verify() "ломает" изображение)
+        image = Image.open(io.BytesIO(image_data))
+        return image
     except Exception as e:
         app.logger.error(f"Ошибка декодирования base64: {e}")
-        raise ValueError("Некорректный формат base64 строки изображения.")
+        raise ValueError("Некорректный формат изображения. Попробуйте другое фото.")
 
 
 # --- Маршруты API ---
@@ -91,33 +96,59 @@ def handle_proxy():
                     image_pil = base64_to_pil(image_b64)
                     images.append(image_pil)
             
-            # Создаем список для Gemini API
+            # ИСПРАВЛЕНИЕ: Создаем список ПРАВИЛЬНО - сначала текст, потом картинки!
             gemini_parts = []
-            gemini_parts.extend(images)  # Добавляем изображения
             if prompt_text.strip():
-                gemini_parts.append(prompt_text.strip())  # Добавляем текст
+                gemini_parts.append(prompt_text.strip())  # Добавляем текст ПЕРВЫМ!
+            
+            for img in images:
+                gemini_parts.append(img)  # Добавляем изображения ПОСЛЕ текста!
             
             # Вызов Gemini API
             if not image_generation_model:
                 return jsonify({"error": "Модель генерации изображений не инициализирована."}), 500
             
+            # ИСПРАВЛЕНИЕ: Добавляем настройки безопасности, чтобы Gemini не блокировал ответ
             response = image_generation_model.generate_content(
                 gemini_parts,
                 generation_config=genai.GenerationConfig(
                     response_modalities=["TEXT", "IMAGE"]
-                )
+                ),
+                safety_settings={
+                    genai.types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
+                    genai.types.HarmCategory.HARM_CATEGORY_HATE_SPEECH: genai.types.HarmBlockThreshold.BLOCK_NONE,
+                    genai.types.HarmCategory.HARM_CATEGORY_HARASSMENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
+                    genai.types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: genai.types.HarmBlockThreshold.BLOCK_NONE,
+                }
             )
             
-            # Извлекаем сгенерированное изображение
+            # ИСПРАВЛЕНИЕ: Ищем изображение в ДВУХ возможных местах!
             generated_image_b64 = None
-            for part in response.parts:
-                if hasattr(part, 'mime_type') and part.mime_type.startswith('image/'):
-                    img_bytes = part.inline_data.data
-                    generated_image_b64 = base64.b64encode(img_bytes).decode('utf-8')
-                    break
+            
+            # Способ 1: В response.parts
+            if hasattr(response, 'parts'):
+                for part in response.parts:
+                    if hasattr(part, 'mime_type') and part.mime_type and part.mime_type.startswith('image/'):
+                        img_bytes = part.inline_data.data
+                        generated_image_b64 = base64.b64encode(img_bytes).decode('utf-8')
+                        break
+            
+            # Способ 2: В candidates (если в способе 1 не нашли)
+            if not generated_image_b64 and hasattr(response, 'candidates'):
+                for candidate in response.candidates:
+                    if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                        for part in candidate.content.parts:
+                            if hasattr(part, 'inline_data') and part.inline_data:
+                                img_bytes = part.inline_data.data
+                                generated_image_b64 = base64.b64encode(img_bytes).decode('utf-8')
+                                break
+                        if generated_image_b64:
+                            break
             
             if not generated_image_b64:
-                raise ValueError("AI не вернул изображение в ответе.")
+                # Дополнительная информация для отладки
+                app.logger.error(f"Gemini ответ: {response}")
+                raise ValueError("AI не вернул изображение в ответе. Попробуйте другое фото или описание.")
             
             # Формируем ответ в формате, который ожидает фронтенд
             return jsonify({
@@ -202,7 +233,9 @@ def handle_generate():
         return jsonify({"error": "Отсутствуют обязательные параметры: clientPhotoBase64 и prompt."}), 400
 
     try:
+        # ИСПРАВЛЕНИЕ: Сначала текст, потом картинки!
         parts = []
+        parts.append(prompt)  # Добавляем описание ПЕРВЫМ!
         
         client_photo_pil = base64_to_pil(client_photo_b64)
         parts.append(client_photo_pil)
@@ -210,27 +243,48 @@ def handle_generate():
         if style_photo_b64:
             style_photo_pil = base64_to_pil(style_photo_b64)
             parts.append(style_photo_pil)
-        
-        parts.append(prompt)
 
         # Вызов API Gemini
         response = image_generation_model.generate_content(
             parts,
             generation_config=genai.GenerationConfig(
                 response_modalities=["TEXT", "IMAGE"]
-            )
+            ),
+            safety_settings={
+                genai.types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
+                genai.types.HarmCategory.HARM_CATEGORY_HATE_SPEECH: genai.types.HarmBlockThreshold.BLOCK_NONE,
+                genai.types.HarmCategory.HARM_CATEGORY_HARASSMENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
+                genai.types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: genai.types.HarmBlockThreshold.BLOCK_NONE,
+            }
         )
 
-        # Извлекаем сгенерированное изображение из ответа
+        # ИСПРАВЛЕНИЕ: Ищем изображение в ДВУХ возможных местах!
         generated_image_b64 = None
-        for part in response.parts:
-            if hasattr(part, 'mime_type') and part.mime_type.startswith('image/'):
-                img_bytes = part.inline_data.data
-                generated_image_b64 = base64.b64encode(img_bytes).decode('utf-8')
-                break
+        
+        # Способ 1: В response.parts
+        if hasattr(response, 'parts'):
+            for part in response.parts:
+                if hasattr(part, 'mime_type') and part.mime_type and part.mime_type.startswith('image/'):
+                    img_bytes = part.inline_data.data
+                    generated_image_b64 = base64.b64encode(img_bytes).decode('utf-8')
+                    break
+        
+        # Способ 2: В candidates (если в способе 1 не нашли)
+        if not generated_image_b64 and hasattr(response, 'candidates'):
+            for candidate in response.candidates:
+                if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                    for part in candidate.content.parts:
+                        if hasattr(part, 'inline_data') and part.inline_data:
+                            img_bytes = part.inline_data.data
+                            generated_image_b64 = base64.b64encode(img_bytes).decode('utf-8')
+                            break
+                    if generated_image_b64:
+                        break
         
         if not generated_image_b64:
-             raise ValueError("AI не вернул изображение в ответе. Попробуйте другой запрос или фото.")
+            # Дополнительная информация для отладки
+            app.logger.error(f"Gemini ответ: {response}")
+            raise ValueError("AI не вернул изображение в ответе. Попробуйте другой запрос или фото.")
 
         return jsonify({"base64Image": generated_image_b64})
 
