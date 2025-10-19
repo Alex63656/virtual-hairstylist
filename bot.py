@@ -2,14 +2,14 @@ import os
 import base64
 import io
 import google.generativeai as genai
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from PIL import Image
 
 # --- Инициализация ---
 app = Flask(__name__)
 # Разрешаем CORS для всех маршрутов, чтобы фронтенд мог обращаться к API
-CORS(app) 
+CORS(app, origins=["*"], methods=["GET", "POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
 
 # --- Настройка Gemini API ---
 try:
@@ -44,11 +44,27 @@ def base64_to_pil(base64_string: str) -> Image.Image:
         raise ValueError("Некорректный формат изображения. Попробуйте другое фото.")
 
 
-# --- Маршруты API ---
+# --- Маршруты для веб-приложения ---
 @app.route('/')
-def index():
-    """Простой маршрут для проверки, что сервер работает."""
-    return "Сервер AI Стилиста запущен и работает."
+def serve_webapp():
+    """Раздача HTML приложения"""
+    try:
+        with open('virtual_hairstylist_bot_ru.html', 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return "Файл приложения не найден", 404
+
+@app.route('/app')
+def serve_app():
+    """Альтернативный путь к приложению"""
+    return serve_webapp()
+
+@app.route('/health')
+def health_check():
+    """Проверка состояния сервера"""
+    return jsonify({"status": "ok", "message": "Сервер AI Стилиста работает"})
+
+# --- API маршруты ---
 
 # НОВЫЙ МАРШРУТ: /api/proxy - это то, что искал фронтенд!
 @app.route('/api/proxy', methods=['POST', 'OPTIONS'], strict_slashes=False)
@@ -304,4 +320,5 @@ def handle_analyze():
 if __name__ == '__main__':
     # Эта часть выполняется только при локальном запуске (python bot.py).
     # На Railway используется Gunicorn из Procfile.
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)), debug=True)
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port, debug=False)
