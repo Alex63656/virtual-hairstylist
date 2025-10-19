@@ -101,7 +101,7 @@ def setup_webhook_route():
     """Ручная настройка webhook"""
     if bot and BOT_TOKEN:
         try:
-            webhook_url = f"{WEBAPP_URL}/bot{BOT_TOKEN}"
+            webhook_url = f"{WEBAPP_URL}/telegram_webhook"
             result = bot.set_webhook(url=webhook_url)
             return jsonify({
                 "success": result,
@@ -115,7 +115,7 @@ def setup_webhook_route():
 @app.route('/test_webhook_route')
 def test_webhook_route():
     """Проверяем, существует ли маршрут webhook"""
-    webhook_path = f'/bot{BOT_TOKEN}'
+    webhook_path = '/telegram_webhook'
     return jsonify({
         "webhook_path": webhook_path,
         "full_url": f"{WEBAPP_URL}{webhook_path}",
@@ -124,7 +124,7 @@ def test_webhook_route():
     })
 
 # --- Telegram Webhook ---
-@app.route(f'/bot{BOT_TOKEN}', methods=['POST'])
+@app.route('/telegram_webhook', methods=['POST'])
 def webhook():
     """Обработка webhook от Telegram"""
     print(f"🔥 WEBHOOK ПОЛУЧЕН! Данные: {request.get_data()}")
