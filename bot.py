@@ -76,21 +76,6 @@ def base64_to_pil(base64_string: str) -> Image.Image:
         raise ValueError("Некорректный формат изображения. Попробуйте другое фото.")
 
 
-# --- Telegram Webhook ---
-@app.route(f'/bot{BOT_TOKEN}', methods=['POST'])
-def webhook():
-    """Обработка webhook от Telegram"""
-    if bot:
-        try:
-            json_string = request.get_data().decode('utf-8')
-            update = telebot.types.Update.de_json(json_string)
-            bot.process_new_updates([update])
-            return "OK"
-        except Exception as e:
-            app.logger.error(f"Ошибка webhook: {e}")
-            return "ERROR", 500
-    return "Bot not initialized", 400
-
 # --- Веб-приложение ---
 @app.route('/')
 def serve_webapp():
@@ -110,6 +95,37 @@ def health_check():
         "bot_status": "active" if bot else "inactive",
         "gemini_status": "active" if image_generation_model else "inactive"
     })
+
+@app.route('/setup_webhook')
+def setup_webhook_route():
+    """Ручная настройка webhook"""
+    if bot and BOT_TOKEN:
+        try:
+            webhook_url = f"{WEBAPP_URL}/bot{BOT_TOKEN}"
+            result = bot.set_webhook(url=webhook_url)
+            return jsonify({
+                "success": result,
+                "webhook_url": webhook_url,
+                "message": "Webhook установлен!" if result else "Ошибка webhook"
+            })
+        except Exception as e:
+            return jsonify({"error": str(e)})
+    return jsonify({"error": "Бот не инициализирован"})
+
+# --- Telegram Webhook ---
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    """Обработка webhook от Telegram"""
+    if bot:
+        try:
+            json_string = request.get_data().decode('utf-8')
+            update = telebot.types.Update.de_json(json_string)
+            bot.process_new_updates([update])
+            return "OK"
+        except Exception as e:
+            app.logger.error(f"Ошибка webhook: {e}")
+            return "ERROR", 500
+    return "Bot not initialized", 400
 
 # --- API маршруты ---
 
