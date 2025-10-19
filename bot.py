@@ -2,14 +2,44 @@ import os
 import base64
 import io
 import google.generativeai as genai
-from flask import Flask, request, jsonify, send_from_directory
+import telebot
+from telebot.types import WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from PIL import Image
 
-# --- Инициализация ---
+# --- Инициализация Flask ---
 app = Flask(__name__)
-# Разрешаем CORS для всех маршрутов, чтобы фронтенд мог обращаться к API
 CORS(app, origins=["*"], methods=["GET", "POST", "OPTIONS"], allow_headers=["Content-Type", "Authorization"])
+
+# --- Настройка Telegram Bot ---
+BOT_TOKEN = os.environ.get('BOT_TOKEN', '7854606797:AAFKsvnC8wNC56jX7SX7-suRCs85hBMQyuY')
+WEBAPP_URL = os.environ.get('WEBAPP_URL', 'https://virtual-hairstylist-production.up.railway.app')
+
+bot = None
+if BOT_TOKEN:
+    try:
+        bot = telebot.TeleBot(BOT_TOKEN)
+        
+        @bot.message_handler(commands=['start'])
+        def start_handler(message):
+            keyboard = InlineKeyboardMarkup()
+            webapp_button = InlineKeyboardButton(
+                "✨ Подобрать прическу", 
+                web_app=WebAppInfo(url=f"{WEBAPP_URL}/")
+            )
+            keyboard.add(webapp_button)
+            
+            bot.send_message(
+                message.chat.id, 
+                "Привет! Я помогу тебе подобрать новую прическу с помощью ИИ! 💇‍♀️\n\nНажми кнопку ниже, чтобы начать:",
+                reply_markup=keyboard
+            )
+        
+        print(f"✅ Telegram Bot инициализирован с токеном: {BOT_TOKEN[:10]}...")
+    except Exception as e:
+        print(f"❌ Ошибка инициализации Telegram Bot: {e}")
+        bot = None
 
 # --- Настройка Gemini API ---
 try:
@@ -20,10 +50,12 @@ try:
     
     # Модель для генерации/редактирования изображений. 
     image_generation_model = genai.GenerativeModel('gemini-2.5-flash-image')
+    print("✅ Gemini API инициализирован")
 
 except Exception as e:
     # Логируем критическую ошибку при запуске, чтобы она была видна в логах сервера
     app.logger.error(f"КРИТИЧЕСКАЯ ОШИБКА при инициализации Gemini: {e}")
+    print(f"❌ Ошибка Gemini API: {e}")
     image_generation_model = None
 
 
@@ -44,7 +76,22 @@ def base64_to_pil(base64_string: str) -> Image.Image:
         raise ValueError("Некорректный формат изображения. Попробуйте другое фото.")
 
 
-# --- Маршруты для веб-приложения ---
+# --- Telegram Webhook ---
+@app.route(f'/bot{BOT_TOKEN}', methods=['POST'])
+def webhook():
+    """Обработка webhook от Telegram"""
+    if bot:
+        try:
+            json_string = request.get_data().decode('utf-8')
+            update = telebot.types.Update.de_json(json_string)
+            bot.process_new_updates([update])
+            return "OK"
+        except Exception as e:
+            app.logger.error(f"Ошибка webhook: {e}")
+            return "ERROR", 500
+    return "Bot not initialized", 400
+
+# --- Веб-приложение ---
 @app.route('/')
 def serve_webapp():
     """Раздача HTML приложения"""
@@ -52,17 +99,17 @@ def serve_webapp():
         with open('virtual_hairstylist_bot_ru.html', 'r', encoding='utf-8') as f:
             return f.read()
     except FileNotFoundError:
-        return "Файл приложения не найден", 404
-
-@app.route('/app')
-def serve_app():
-    """Альтернативный путь к приложению"""
-    return serve_webapp()
+        return jsonify({"error": "Файл приложения не найден"}), 404
 
 @app.route('/health')
 def health_check():
     """Проверка состояния сервера"""
-    return jsonify({"status": "ok", "message": "Сервер AI Стилиста работает"})
+    return jsonify({
+        "status": "ok", 
+        "message": "Сервер AI Стилиста работает",
+        "bot_status": "active" if bot else "inactive",
+        "gemini_status": "active" if image_generation_model else "inactive"
+    })
 
 # --- API маршруты ---
 
@@ -321,4 +368,5 @@ if __name__ == '__main__':
     # Эта часть выполняется только при локальном запуске (python bot.py).
     # На Railway используется Gunicorn из Procfile.
     port = int(os.environ.get('PORT', 8080))
+    print(f"🚀 Запуск сервера на порту {port}")
     app.run(host='0.0.0.0', port=port, debug=False)
