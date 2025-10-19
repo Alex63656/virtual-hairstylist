@@ -113,7 +113,8 @@ def setup_webhook_route():
     return jsonify({"error": "Бот не инициализирован"})
 
 # --- Telegram Webhook ---
-@app.route('/webhook', methods=['POST'])
+# --- Telegram Webhook ---
+@app.route(f'/bot{BOT_TOKEN}', methods=['POST'])
 def webhook():
     """Обработка webhook от Telegram"""
     if bot:
@@ -386,3 +387,4 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     print(f"🚀 Запуск сервера на порту {port}")
     app.run(host='0.0.0.0', port=port, debug=False)
+
