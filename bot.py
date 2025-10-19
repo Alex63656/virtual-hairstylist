@@ -1,99 +1,114 @@
 import os
+import base64
+import io
 import google.generativeai as genai
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from PIL import Image
-import io
-import base64
 
-# --- Конфигурация ---
-# Настройка Flask приложения
-app = Flask(__name__, static_folder='.', static_url_path='')
-CORS(app) # Включаем CORS для всех маршрутов
+# --- Инициализация ---
+app = Flask(__name__)
+# Разрешаем CORS для всех маршрутов, чтобы фронтенд мог обращаться к API
+CORS(app) 
 
-# Конфигурация Gemini API
-# !!! ВАЖНО: Вставьте ваш API ключ сюда, вместо "AIzaSyCX-D5d5kXJrmyMZJREykCQAbx-bXqVCIk" !!!
-API_KEY = "AIzaSyCX-D5d5kXJrmyMZJREykCQAbx-bXqVCIk" 
-
+# --- Настройка Gemini API ---
 try:
-    if not API_KEY or API_KEY == "AIzaSyCX-D5d5kXJrmyMZJREykCQAbx-bXqVCIk":
-        raise ValueError("AIzaSyCX-D5d5kXJrmyMZJREykCQAbx-bXqVCIk")
-    genai.configure(api_key=API_KEY)
-except ValueError as e:
-    print(f"Критическая ошибка: {e}")
-    # Приложение не сможет запуститься без ключа API
+    # API ключ вписан в код согласно вашему требованию.
+    api_key = "AIzaSyCX-D5d5kXJrmyMZJREykCQAbx-bXqVCIk"
+    
+    genai.configure(api_key=api_key)
+    
+    # Модель для генерации/редактирования изображений. 
+    image_generation_model = genai.GenerativeModel('gemini-2.5-flash-image')
+
+except Exception as e:
+    # Логируем критическую ошибку при запуске, чтобы она была видна в логах сервера
+    app.logger.error(f"КРИТИЧЕСКАЯ ОШИБКА при инициализации Gemini: {e}")
+    image_generation_model = None
+
 
 # --- Вспомогательные функции ---
-def base64_to_pil_image(base64_string):
-    """Конвертирует строку base64 в объект изображения PIL."""
-    if "base64," in base64_string:
-        base64_string = base64_string.split("base64,")[1]
-    image_data = base64.b64decode(base64_string)
-    return Image.open(io.BytesIO(image_data))
+def base64_to_pil(base64_string: str) -> Image.Image:
+    """Конвертирует base64 строку в объект PIL.Image для обработки."""
+    # Восстанавливаем padding, если он был утерян при передаче
+    missing_padding = len(base64_string) % 4
+    if missing_padding:
+        base64_string += '=' * (4 - missing_padding)
+    
+    try:
+        image_data = base64.b64decode(base64_string)
+        return Image.open(io.BytesIO(image_data))
+    except Exception as e:
+        app.logger.error(f"Ошибка декодирования base64: {e}")
+        raise ValueError("Некорректный формат base64 строки изображения.")
 
-def pil_image_to_blob(image, mime_type='image/jpeg'):
-    """Конвертирует объект изображения PIL в blob для Gemini API."""
-    buffered = io.BytesIO()
-    if image.mode != 'RGB':
-        image = image.convert('RGB')
-    image.save(buffered, format=mime_type.split('/')[1].upper())
-    img_byte = buffered.getvalue()
-    return {'mime_type': mime_type, 'data': base64.b64encode(img_byte).decode('utf-8')}
 
 # --- Маршруты API ---
+@app.route('/')
+def index():
+    """Простой маршрут для проверки, что сервер работает."""
+    return "Сервер AI Стилиста запущен и работает."
 
-@app.route('/api/generate', methods=['POST'])
-def generate_style():
-    """Эндпоинт API для генерации нового изображения прически."""
+@app.route('/api/generate', methods=['POST'], strict_slashes=False)
+def handle_generate():
+    """
+    Основной маршрут для изменения прически.
+    strict_slashes=False делает маршрут нечувствительным к наличию / в конце URL.
+    """
+    if not image_generation_model:
+        return jsonify({"error": "Серверная ошибка: модель генерации изображений не инициализирована."}), 500
+
     if not request.is_json:
-        return jsonify({"error": "Запрос должен быть в формате JSON"}), 400
+        return jsonify({"error": "Неверный формат запроса. Ожидается JSON."}), 400
 
     data = request.get_json()
     client_photo_b64 = data.get('clientPhotoBase64')
-    style_photo_b64 = data.get('stylePhotoBase64')
     prompt = data.get('prompt')
+    style_photo_b64 = data.get('stylePhotoBase64')
 
     if not client_photo_b64 or not prompt:
-        return jsonify({"error": "Отсутствует фото клиента или текстовый промпт"}), 400
+        return jsonify({"error": "Отсутствуют обязательные параметры: clientPhotoBase64 и prompt."}), 400
 
     try:
-        parts = [prompt]
+        parts = []
         
-        client_image = base64_to_pil_image(client_photo_b64)
-        client_blob = pil_image_to_blob(client_image)
-        parts.append(client_blob)
+        client_photo_pil = base64_to_pil(client_photo_b64)
+        parts.append(client_photo_pil)
         
         if style_photo_b64:
-            style_image = base64_to_pil_image(style_photo_b64)
-            style_blob = pil_image_to_blob(style_image)
-            parts.append(style_blob)
+            style_photo_pil = base64_to_pil(style_photo_b64)
+            parts.append(style_photo_pil)
+        
+        parts.append(prompt)
 
-        model = genai.GenerativeModel('gemini-2.5-flash-image')
-        response = model.generate_content(
-            parts,
-            generation_config={"response_modalities": ["IMAGE"]}
-        )
+        # Вызов API Gemini
+        response = image_generation_model.generate_content(parts)
 
-        if response.candidates and response.candidates[0].content.parts:
-            image_part = response.candidates[0].content.parts[0]
-            if image_part.inline_data:
-                generated_image_b64 = image_part.inline_data.data
-                return jsonify({"base64Image": generated_image_b64})
+        # Извлекаем сгенерированное изображение из ответа
+        generated_image_b64 = None
+        for part in response.parts:
+            if hasattr(part, 'mime_type') and part.mime_type.startswith('image/'):
+                img_bytes = part.inline_data.data
+                generated_image_b64 = base64.b64encode(img_bytes).decode('utf-8')
+                break
+        
+        if not generated_image_b64:
+             raise ValueError("AI не вернул изображение в ответе. Попробуйте другой запрос или фото.")
 
-        raise Exception("Модель AI не вернула изображение.")
+        return jsonify({"base64Image": generated_image_b64})
 
     except Exception as e:
-        print(f"Ошибка при генерации изображения: {e}")
-        if "SAFETY" in str(e).upper():
-             return jsonify({"error": "Запрос заблокирован из-за нарушения правил безопасности. Попробуйте другое фото или описание."}), 500
-        return jsonify({"error": f"Внутренняя ошибка сервера: Попробуйте позже."}), 500
+        app.logger.error(f"Ошибка при генерации изображения: {e}")
+        return jsonify({"error": f"Произошла ошибка на сервере при генерации: {str(e)}"}), 500
 
 
-@app.route('/api/analyze', methods=['POST'])
-def analyze_text():
-    """Эндпоинт API для анализа изображения и возврата текста."""
+@app.route('/api/analyze', methods=['POST'], strict_slashes=False)
+def handle_analyze():
+    """
+    Маршрут для текстового анализа фото (рекомендации, описание).
+    """
     if not request.is_json:
-        return jsonify({"error": "Запрос должен быть в формате JSON"}), 400
+        return jsonify({"error": "Неверный формат запроса. Ожидается JSON."}), 400
 
     data = request.get_json()
     system_prompt = data.get('systemPrompt')
@@ -101,42 +116,27 @@ def analyze_text():
     image_b64 = data.get('imageBase64')
 
     if not image_b64 or not user_prompt:
-        return jsonify({"error": "Отсутствует изображение или пользовательский промпт"}), 400
+        return jsonify({"error": "Отсутствуют обязательные параметры: imageBase64 и userPrompt."}), 400
 
     try:
-        image = base64_to_pil_image(image_b64)
-        image_blob = pil_image_to_blob(image)
-        parts = [user_prompt, image_blob]
+        image_pil = base64_to_pil(image_b64)
         
-        model = genai.GenerativeModel(
+        # Модель для анализа фото и текста.
+        text_vision_model = genai.GenerativeModel(
             'gemini-2.5-flash',
-            system_instruction=system_prompt
+            system_instruction=system_prompt if system_prompt else None
         )
-        response = model.generate_content(parts)
+
+        response = text_vision_model.generate_content([user_prompt, image_pil])
 
         return jsonify({"text": response.text})
 
     except Exception as e:
-        print(f"Ошибка при анализе текста: {e}")
-        if "SAFETY" in str(e).upper():
-             return jsonify({"error": "Запрос заблокирован из-за нарушения правил безопасности. Попробуйте другое фото."}), 500
-        return jsonify({"error": f"Внутренняя ошибка сервера: Попробуйте позже."}), 500
+        app.logger.error(f"Ошибка при анализе изображения: {e}")
+        return jsonify({"error": f"Произошла ошибка на сервере при анализе: {str(e)}"}), 500
 
-# --- Отправка статических файлов (вашего сайта) ---
-
-@app.route('/')
-def index():
-    """Отдает главный файл index.html."""
-    return send_from_directory('.', 'index.html')
-
-@app.route('/<path:path>')
-def serve_static(path):
-    """Отдает другие статические файлы (например, index.tsx)."""
-    return send_from_directory('.', path)
-
-# --- Запуск сервера ---
-
+# --- Запуск приложения ---
 if __name__ == '__main__':
-    # Gunicorn будет использовать этот 'app' объект
-    # Для локального запуска будет использоваться порт 8080
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+    # Эта часть выполняется только при локальном запуске (python bot.py).
+    # На Railway используется Gunicorn из Procfile.
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)), debug=True)
