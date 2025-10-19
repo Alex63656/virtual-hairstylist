@@ -71,10 +71,28 @@ def base64_to_pil(base64_string: str) -> Image.Image:
     try:
         image_data = base64.b64decode(base64_string)
         image = Image.open(io.BytesIO(image_data))
+        
+        # ИСПРАВЛЕНИЕ: Конвертируем MPO и другие форматы в RGB
+        if image.format == 'MPO' or image.mode != 'RGB':
+            print(f"🔄 Конвертирую изображение из {image.format} ({image.mode}) в RGB")
+            # Берем первый кадр для MPO
+            if hasattr(image, 'seek'):
+                image.seek(0)
+            # Конвертируем в RGB
+            if image.mode in ('RGBA', 'LA', 'P'):
+                # Для прозрачных изображений создаем белый фон
+                background = Image.new('RGB', image.size, (255, 255, 255))
+                if image.mode == 'P':
+                    image = image.convert('RGBA')
+                background.paste(image, mask=image.split()[-1] if len(image.split()) > 3 else None)
+                image = background
+            else:
+                image = image.convert('RGB')
+        
         return image
     except Exception as e:
         app.logger.error(f"Ошибка декодирования base64: {e}")
-        raise ValueError("Некорректный формат изображения. Попробуйте другое фото.")
+        raise ValueError("Некорректный формат изображения. Попробуйте другое фото или конвертируйте в JPEG.")
 
 
 # --- Веб-приложение ---
