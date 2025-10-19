@@ -45,7 +45,11 @@ def base64_to_pil(base64_string: str) -> Image.Image:
 
 # --- Маршруты API ---
 @app.route('/')
-def index(): # НОВЫЙ МАРШРУТ: /api/proxy - это то, что искал фронтенд!
+def index():
+    """Простой маршрут для проверки, что сервер работает."""
+    return "Сервер AI Стилиста запущен и работает."
+
+# НОВЫЙ МАРШРУТ: /api/proxy - это то, что искал фронтенд!
 @app.route('/api/proxy', methods=['POST', 'OPTIONS'], strict_slashes=False)
 def handle_proxy():
     """Прокси маршрут для обработки запросов от фронтенда"""
@@ -172,9 +176,6 @@ def handle_proxy():
         app.logger.error(f"Ошибка в прокси: {e}")
         return jsonify({"error": f"Произошла ошибка: {str(e)}"}), 500
 
-    """Простой маршрут для проверки, что сервер работает."""
-    return "Сервер AI Стилиста запущен и работает."
-
 @app.route('/api/generate', methods=['POST'], strict_slashes=False)
 def handle_generate():
     """
@@ -266,4 +267,3 @@ if __name__ == '__main__':
     # Эта часть выполняется только при локальном запуске (python bot.py).
     # На Railway используется Gunicorn из Procfile.
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)), debug=True)
-
