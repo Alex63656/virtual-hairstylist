@@ -138,6 +138,19 @@
                     
                     <div id="result-container" style="display: none; text-align: center;">
                         <img id="result-image" style="max-width: 100%; height: auto; border-radius: 16px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);" />
+                        
+                        <!-- КНОПКИ ПОДЕЛИТЬСЯ -->
+                        <div id="share-buttons" style="margin-top: 20px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                            <button id="share-vk" style="flex: 1; min-width: 120px; padding: 12px 16px; background: #0077FF; color: #ffffff; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.2s;">
+                                📱 ВКонтакте
+                            </button>
+                            <button id="share-telegram" style="flex: 1; min-width: 120px; padding: 12px 16px; background: #0088CC; color: #ffffff; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.2s;">
+                                📢 Telegram
+                            </button>
+                            <button id="download-result" style="flex: 1; min-width: 120px; padding: 12px 16px; background: linear-gradient(45deg, #5a4f46, #6a5f56); color: #ffffff; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.2s;">
+                                💾 Скачать
+                            </button>
+                        </div>
                     </div>
                     
                     <div style="margin-top: 20px; display: flex; gap: 12px;">
@@ -146,12 +159,6 @@
                         </button>
                         <button id="reset-all" style="padding: 16px; background: rgba(255, 255, 255, 0.15); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s;">
                             🔄 СБРОС
-                        </button>
-                    </div>
-                    
-                    <div id="download-section" style="display: none; margin-top: 16px;">
-                        <button id="download-result" style="width: 100%; padding: 14px; background: linear-gradient(45deg, #5a4f46, #6a5f56); color: #ffffff; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                            💾 Скачать до/После
                         </button>
                     </div>
                 </div>
@@ -223,10 +230,12 @@
                 grid-template-columns: 1fr !important;
             }
             
-            /* Исправляем переполнение на мобильных */
-            * {
-                max-width: 100%;
-                word-wrap: break-word;
+            #share-buttons {
+                flex-direction: column !important;
+            }
+            
+            #share-buttons button {
+                min-width: auto !important;
             }
         }
     </style>
@@ -246,7 +255,7 @@
         const CORRECT_PROMO_CODE = 'STILIST';
         const TEST_PROMO_CODE = 'TEST30';
         
-        // УЛУЧШЕННЫЕ СИСТЕМНЫЕ ПРОМПТЫ НА АНГЛИЙСКОМ
+        // ИСПРАВЛЕННЫЕ ПРОМПТЫ (КРАТКИЕ ДЛЯ ОПИСАНИЯ)
         const GENERATION_SYSTEM_PROMPT = `You are a world-class AI hairstylist specializing in photorealistic hair replacement and styling. Your task is to perfectly replace ONLY the hair on a person's photo while preserving their identity completely.
 
 CRITICAL REQUIREMENTS:
@@ -257,36 +266,20 @@ CRITICAL REQUIREMENTS:
 5. LIGHTING & QUALITY: Match the original photo's lighting, shadows, and image quality perfectly
 6. BACKGROUND PRESERVATION: Keep clothing, background, and all other elements exactly as they were
 
-HAIR STYLING EXPERTISE:
-- Analyze face shape and features to ensure the new hairstyle is flattering
-- Consider hair texture, volume, and natural growth patterns
-- Apply proper highlights, lowlights, and color gradients if needed
-- Create realistic hair movement and styling that suits the person's features
-- Ensure proper hair density and natural-looking roots
-
 The result must be indistinguishable from a professional salon photo of this exact person with their new hairstyle.`;
 
-        const SUGGESTION_SYSTEM_PROMPT = `You are an expert hairstylist with 20+ years of experience. Analyze the client's photo and provide professional hairstyle recommendations.
+        const SUGGESTION_SYSTEM_PROMPT = `You are an expert hairstylist. Analyze the client's photo and provide professional hairstyle recommendations.
 
-Consider:
-- Face shape and proportions
-- Current hair type and condition
-- Facial features that should be enhanced
-- Modern trends that would suit them
-- Practical styling considerations
+Consider face shape, features, and current style potential. Provide 3-4 specific recommendations in Russian, formatted as bullet points. Be concise but helpful.`;
 
-Provide 3-4 specific recommendations in Russian, formatted as bullet points. Be concise but detailed about cut, length, and styling.`;
+        // ИСПРАВЛЕННЫЙ ПРОМПТ ДЛЯ ОПИСАНИЯ ПРИЧЕСОК
+        const DESCRIBE_SYSTEM_PROMPT = `You are a professional AI assistant for hairstyle analysis. Your task is to create a brief, technical description of the hairstyle in this photo.
 
-        const DESCRIBE_SYSTEM_PROMPT = `You are a professional hairstylist. Analyze this hairstyle photo and provide a detailed technical description.
+IMPORTANT: Respond ONLY with a concise description in Russian. Do not add introductory phrases, explanations, or formatting.
 
-Include:
-- Cut type and technique
-- Length and layers
-- Color and highlights
-- Styling method
-- Texture and volume
+Describe: hair length, cut type, color, texture, and styling technique.
 
-Be precise and technical in Russian. This description will be used to recreate the exact same hairstyle.`;
+Example response format: "Каре до плеч с удлиненными передними прядями, пепельно-русый оттенок с легкими светлыми бликами, прямая укладка с объемом у корней"`;
 
         // Состояние приложения
         let clientPhoto = { file: null, preview: null, base64: null };
@@ -344,7 +337,7 @@ Be precise and technical in Russian. This description will be used to recreate t
                 if (modalData.type === 'image') {
                     modalContent.innerHTML = `<img src="${modalData.content}" style="max-width: 100%; height: auto; border-radius: 12px;" />`;
                 } else {
-                    modalContent.textContent = modalData.content;
+                    modalContent.innerHTML = modalData.content.replace(/\n/g, '<br>');
                 }
                 modalElement.style.display = 'block';
             } else {
@@ -467,7 +460,7 @@ Be precise and technical in Russian. This description will be used to recreate t
             return data.text;
         };
         
-        // УЛУЧШЕННАЯ ФУНКЦИЯ ГЕНЕРАЦИИ С ПРОФЕССИОНАЛЬНЫМИ ПРОМПТАМИ
+        // УЛУЧШЕННАЯ ФУНКЦИЯ ГЕНЕРАЦИИ 
         const handleGenerate = async () => {
             if (!clientPhoto.base64) {
                 showErrorModal("Пожалуйста, загрузите ваше фото.");
@@ -574,14 +567,23 @@ SPECIFIC INSTRUCTIONS:
             }
         };
         
+        // ИСПРАВЛЕННАЯ ФУНКЦИЯ ОПИСАНИЯ ПРИЧЕСОК
         const describeHairstyle = async () => {
             const result = await handleLLMCall(
                 DESCRIBE_SYSTEM_PROMPT, 
-                "Describe this hairstyle in technical detail: cut type, length, layers, color, highlights, styling technique, and texture. Be specific enough to recreate this exact look.", 
+                "Describe this hairstyle briefly and technically for AI generation.", 
                 stylePhoto.base64
             );
             if (result) {
-                document.getElementById('prompt-input').value = result;
+                // Убираем лишние фразы и форматирование
+                const cleanResult = result
+                    .replace(/\*\*/g, '')
+                    .replace(/Отлично! Давайте разберем эту прическу детально, чтобы ее можно было точно повторить\./g, '')
+                    .replace(/Техническое описание прически:/g, '')
+                    .replace(/^\*\s*/g, '')
+                    .trim();
+                
+                document.getElementById('prompt-input').value = cleanResult;
             }
         };
         
@@ -605,6 +607,52 @@ SPECIFIC INSTRUCTIONS:
         // ПЕРЕХОД В TELEGRAM ПРИ ПОКУПКЕ ГЕНЕРАЦИЙ
         const buyGenerations = () => {
             window.open('https://t.me/tatianasotina', '_blank');
+        };
+        
+        // ФУНКЦИИ ПОДЕЛИТЬСЯ В СОЦСЕТЯХ
+        const shareToVK = () => {
+            if (!generatedImage.preview) {
+                showErrorModal('Сначала сгенерируйте изображение!');
+                return;
+            }
+            
+            const text = `Попробовала новую прическу в MISS SLIVKI AI! 💇‍♀️ 
+Виртуальная примерка причесок - это так удобно! 
+Можете тоже попробовать: @miss_slivki_ai_bot
+#новыйобраз #missslivki #AI #виртуальнаяпримерка`;
+            
+            const vkUrl = `https://vk.com/share.php?url=${encodeURIComponent('https://t.me/miss_slivki_ai_bot')}&title=${encodeURIComponent(text)}`;
+            window.open(vkUrl, '_blank');
+        };
+        
+        const shareToTelegram = () => {
+            if (!generatedImage.preview) {
+                showErrorModal('Сначала сгенерируйте изображение!');
+                return;
+            }
+            
+            const text = `🎨 Попробовала виртуальную примерку причесок в MISS SLIVKI AI!
+            
+Результат просто огонь! 🔥
+            
+Кто хочет тоже попробовать новый образ без риска - переходите: @miss_slivki_ai_bot
+            
+Первые 10 примерок бесплатно! ✨`;
+            
+            const tgUrl = `https://t.me/share/url?url=${encodeURIComponent('https://t.me/miss_slivki_ai_bot')}&text=${encodeURIComponent(text)}`;
+            window.open(tgUrl, '_blank');
+        };
+        
+        const downloadResult = () => {
+            if (!generatedImage.preview) {
+                showErrorModal('Сначала сгенерируйте изображение!');
+                return;
+            }
+            
+            const link = document.createElement('a');
+            link.download = 'miss_slivki_new_hairstyle.png';
+            link.href = generatedImage.preview;
+            link.click();
         };
         
         const resetAll = () => {
@@ -642,6 +690,11 @@ SPECIFIC INSTRUCTIONS:
             document.getElementById('reset-all').addEventListener('click', resetAll);
             document.getElementById('close-modal').addEventListener('click', () => setModal({ visible: false }));
             
+            // ОБРАБОТЧИКИ КНОПОК ПОДЕЛИТЬСЯ
+            document.getElementById('share-vk').addEventListener('click', shareToVK);
+            document.getElementById('share-telegram').addEventListener('click', shareToTelegram);
+            document.getElementById('download-result').addEventListener('click', downloadResult);
+            
             // Закрытие модалки по клику вне её
             document.getElementById('modal').addEventListener('click', (e) => {
                 if (e.target.id === 'modal') {
@@ -650,7 +703,7 @@ SPECIFIC INSTRUCTIONS:
             });
             
             updateUI();
-            console.log('MISS SLIVKI AI успешно загружен с улучшенными промптами! 🎨');
+            console.log('MISS SLIVKI AI успешно загружен с поддержкой соцсетей! 🎨');
         });
     </script>
 </body>
