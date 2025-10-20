@@ -246,10 +246,47 @@
         const CORRECT_PROMO_CODE = 'STILIST';
         const TEST_PROMO_CODE = 'TEST30';
         
-        // Системные промпты
-        const GENERATION_SYSTEM_PROMPT = 'You are an expert photorealistic AI hairstylist. Your task is to meticulously replace the hair on a person\'s photo according to a user\'s request.\n\nPRIMARY DIRECTIVE: First, digitally REMOVE the original hair completely. Then, render the NEW hairstyle. This is crucial to avoid layering new hair on top of old hair.\n\nABSOLUTE REQUIREMENT: The face, facial features, expression, skin, clothing, and background MUST remain COMPLETELY UNCHANGED. Only the hair (style, color, length) should be modified.\n\nMaintain the original photo\'s quality, lighting, and style. The result must be photorealistic.';
-        const SUGGESTION_SYSTEM_PROMPT = "You are an expert hairstylist. Analyze the client's photo and briefly, in a list format (using *), suggest 3-4 haircuts or styles that would suit their face shape. Respond in Russian.";
-        const DESCRIBE_SYSTEM_PROMPT = "You are a professional hairstylist. Describe the hairstyle in the photo. Specify the cut type, length, color, and styling. Be brief and precise. Respond in Russian.";
+        // УЛУЧШЕННЫЕ СИСТЕМНЫЕ ПРОМПТЫ НА АНГЛИЙСКОМ
+        const GENERATION_SYSTEM_PROMPT = `You are a world-class AI hairstylist specializing in photorealistic hair replacement and styling. Your task is to perfectly replace ONLY the hair on a person's photo while preserving their identity completely.
+
+CRITICAL REQUIREMENTS:
+1. FACE PRESERVATION: The person's face shape, features, skin tone, expression, and identity MUST remain 100% unchanged
+2. HAIR REPLACEMENT ONLY: Remove the existing hair completely and replace it with the requested new hairstyle
+3. NATURAL INTEGRATION: Blend the new hair seamlessly with the person's natural hairline and head shape
+4. REALISTIC STYLING: Ensure the new hairstyle looks natural and professionally styled for this specific person
+5. LIGHTING & QUALITY: Match the original photo's lighting, shadows, and image quality perfectly
+6. BACKGROUND PRESERVATION: Keep clothing, background, and all other elements exactly as they were
+
+HAIR STYLING EXPERTISE:
+- Analyze face shape and features to ensure the new hairstyle is flattering
+- Consider hair texture, volume, and natural growth patterns
+- Apply proper highlights, lowlights, and color gradients if needed
+- Create realistic hair movement and styling that suits the person's features
+- Ensure proper hair density and natural-looking roots
+
+The result must be indistinguishable from a professional salon photo of this exact person with their new hairstyle.`;
+
+        const SUGGESTION_SYSTEM_PROMPT = `You are an expert hairstylist with 20+ years of experience. Analyze the client's photo and provide professional hairstyle recommendations.
+
+Consider:
+- Face shape and proportions
+- Current hair type and condition
+- Facial features that should be enhanced
+- Modern trends that would suit them
+- Practical styling considerations
+
+Provide 3-4 specific recommendations in Russian, formatted as bullet points. Be concise but detailed about cut, length, and styling.`;
+
+        const DESCRIBE_SYSTEM_PROMPT = `You are a professional hairstylist. Analyze this hairstyle photo and provide a detailed technical description.
+
+Include:
+- Cut type and technique
+- Length and layers
+- Color and highlights
+- Styling method
+- Texture and volume
+
+Be precise and technical in Russian. This description will be used to recreate the exact same hairstyle.`;
 
         // Состояние приложения
         let clientPhoto = { file: null, preview: null, base64: null };
@@ -430,7 +467,7 @@
             return data.text;
         };
         
-        // Основные функции
+        // УЛУЧШЕННАЯ ФУНКЦИЯ ГЕНЕРАЦИИ С ПРОФЕССИОНАЛЬНЫМИ ПРОМПТАМИ
         const handleGenerate = async () => {
             if (!clientPhoto.base64) {
                 showErrorModal("Пожалуйста, загрузите ваше фото.");
@@ -450,8 +487,24 @@
             
             setLoading(true);
             
-            let userPrompt = prompt || "a new hairstyle";
-            const fullPrompt = `${GENERATION_SYSTEM_PROMPT}\n\nCLIENT REQUEST: ${userPrompt}`;
+            // УЛУЧШЕННЫЙ ПРОМПТ С АКЦЕНТОМ НА СОХРАНЕНИЕ ЛИЦА
+            let userPrompt = prompt || "a beautiful new hairstyle";
+            
+            // Если есть фото-пример, усиливаем промпт
+            if (stylePhoto.base64) {
+                userPrompt = `Copy the exact hairstyle from the reference image: ${userPrompt}. Transfer the hair color, cut, length, and styling technique precisely while preserving the client's facial identity completely.`;
+            }
+            
+            const fullPrompt = `${GENERATION_SYSTEM_PROMPT}
+
+CLIENT HAIRSTYLE REQUEST: ${userPrompt}
+
+SPECIFIC INSTRUCTIONS:
+- Keep the client's face, eyes, nose, mouth, and facial structure completely unchanged
+- Only modify the hair area above the natural hairline
+- Ensure the new hairstyle complements this specific person's face shape
+- Maintain professional salon-quality results
+- Preserve original image lighting and quality`;
             
             try {
                 const resultBase64 = await generateImage({
@@ -511,14 +564,22 @@
         };
         
         const getHairstyleSuggestions = async () => {
-            const result = await handleLLMCall(SUGGESTION_SYSTEM_PROMPT, "Посоветуй, какие прически мне подойдут?", clientPhoto.base64);
+            const result = await handleLLMCall(
+                SUGGESTION_SYSTEM_PROMPT, 
+                "Analyze this person's face shape and features. Recommend 3-4 specific hairstyles that would be most flattering for them. Consider their facial proportions, bone structure, and current style potential.", 
+                clientPhoto.base64
+            );
             if (result) {
                 setModal({ visible: true, title: 'Рекомендации по прическам', content: result, type: 'text' });
             }
         };
         
         const describeHairstyle = async () => {
-            const result = await handleLLMCall(DESCRIBE_SYSTEM_PROMPT, "Опиши эту прическу.", stylePhoto.base64);
+            const result = await handleLLMCall(
+                DESCRIBE_SYSTEM_PROMPT, 
+                "Describe this hairstyle in technical detail: cut type, length, layers, color, highlights, styling technique, and texture. Be specific enough to recreate this exact look.", 
+                stylePhoto.base64
+            );
             if (result) {
                 document.getElementById('prompt-input').value = result;
             }
@@ -577,7 +638,7 @@
             document.getElementById('suggest-hairstyles').addEventListener('click', getHairstyleSuggestions);
             document.getElementById('describe-hairstyle').addEventListener('click', describeHairstyle);
             document.getElementById('apply-promo').addEventListener('click', applyPromoCode);
-            document.getElementById('buy-generations').addEventListener('click', buyGenerations); // НОВОЕ!
+            document.getElementById('buy-generations').addEventListener('click', buyGenerations);
             document.getElementById('reset-all').addEventListener('click', resetAll);
             document.getElementById('close-modal').addEventListener('click', () => setModal({ visible: false }));
             
@@ -589,7 +650,7 @@
             });
             
             updateUI();
-            console.log('MISS SLIVKI AI успешно загружен! 🎨');
+            console.log('MISS SLIVKI AI успешно загружен с улучшенными промптами! 🎨');
         });
     </script>
 </body>
