@@ -2,9 +2,13 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>MISS SLIVKI AI</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
     <div id="root">
@@ -24,6 +28,12 @@
                 </div>
             </div>
 
+            <!-- ДИАГНОСТИКА iOS -->
+            <div id="ios-debug" style="display: none; margin: 24px; padding: 20px; background: rgba(255, 0, 0, 0.1); border-radius: 16px; border: 1px solid rgba(255, 0, 0, 0.3);">
+                <h4 style="color: #ffcccc; margin: 0 0 10px 0;">iOS Debug Info:</h4>
+                <p id="debug-info" style="color: #ffcccc; font-size: 14px; margin: 0;"></p>
+            </div>
+
             <!-- Советы для лучшего результата -->
             <div style="margin: 24px; padding: 24px; background: rgba(255, 255, 255, 0.1); border-radius: 20px; backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
@@ -32,13 +42,16 @@
                 </div>
                 <ul style="margin: 0; padding-left: 24px; color: #f0e8d8; line-height: 1.6; font-size: 15px;">
                     <li style="margin-bottom: 12px;">
-                        <strong style="color: #ffffff;">Фото клиента:</strong> Загружайте фото анфас, с хорошим освещением, где волосы четко видны и не перекрыты руками или предметами.
+                        <strong style="color: #ffffff;">Фото клиента:</strong> Загружайте фото анфас, с хорошим освещением, где волосы четко видны.
                     </li>
                     <li style="margin-bottom: 12px;">
-                        <strong style="color: #ffffff;">Фото-пример:</strong> Используйте изображения, где прическа хорошо видна на модели, смотрящей прямо в камеру.
+                        <strong style="color: #ffffff;">iPhone пользователи:</strong> Если фото не загружается, попробуйте закрыть и открыть приложение заново.
+                    </li>
+                    <li style="margin-bottom: 12px;">
+                        <strong style="color: #ffffff;">Фото-пример:</strong> Используйте четкие изображения причесок.
                     </li>
                     <li>
-                        <strong style="color: #ffffff;">Описание:</strong> Описание надо писать только тогда, когда нет фото-примера! Будьте конкретны. Указывайте цвет, длину, наличие челки и тип укладки.
+                        <strong style="color: #ffffff;">Описание:</strong> Будьте конкретны - указывайте цвет, длину, тип укладки.
                     </li>
                 </ul>
             </div>
@@ -80,9 +93,19 @@
                 <div style="background: rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 28px; backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);">
                     <h3 style="font-size: 20px; font-weight: 600; margin: 0 0 20px 0; color: #ffffff;">1. Загрузите ваше фото</h3>
                     
+                    <!-- СКРЫТЫЙ INPUT ДЛЯ iOS ФИКСА -->
+                    <input 
+                        type="file" 
+                        id="client-file-input" 
+                        accept="image/*" 
+                        capture="environment"
+                        style="display: none;"
+                    />
+                    
                     <div id="client-photo-uploader" style="border: 2px dashed rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 36px; text-align: center; cursor: pointer; transition: all 0.3s; background: rgba(255, 255, 255, 0.05);">
                         <div style="font-size: 56px; margin-bottom: 16px; color: #f0e8d8;">📷</div>
-                        <p style="margin: 0; color: #f0e8d8; font-weight: 500; font-size: 16px;">Нажмите или перетащите фото</p>
+                        <p style="margin: 0; color: #f0e8d8; font-weight: 500; font-size: 16px;">Нажмите для выбора фото</p>
+                        <p id="client-upload-status" style="margin: 10px 0 0 0; color: #ffcccc; font-size: 14px; display: none;">Загрузка...</p>
                     </div>
                     
                     <div id="client-photo-preview" style="display: none; text-align: center; margin-top: 20px;">
@@ -105,9 +128,19 @@
                     
                     <div style="text-align: center; margin: 20px 0; color: #d0c0b0; font-weight: 600; font-size: 16px;">-- ИЛИ --</div>
                     
+                    <!-- СКРЫТЫЙ INPUT ДЛЯ iOS ФИКСА -->
+                    <input 
+                        type="file" 
+                        id="style-file-input" 
+                        accept="image/*" 
+                        capture="environment"
+                        style="display: none;"
+                    />
+                    
                     <div id="style-photo-uploader" style="border: 2px dashed rgba(255, 255, 255, 0.3); border-radius: 16px; padding: 36px; text-align: center; cursor: pointer; transition: all 0.3s; background: rgba(255, 255, 255, 0.05);">
                         <div style="font-size: 56px; margin-bottom: 16px; color: #f0e8d8;">🎨</div>
                         <p style="margin: 0; color: #f0e8d8; font-weight: 500; font-size: 16px;">Загрузите фото-пример</p>
+                        <p id="style-upload-status" style="margin: 10px 0 0 0; color: #ffcccc; font-size: 14px; display: none;">Загрузка...</p>
                     </div>
                     
                     <div id="style-photo-preview" style="display: none; text-align: center; margin-top: 20px;">
@@ -187,10 +220,21 @@
             margin: 0;
             padding: 0;
             font-family: Inter, sans-serif;
+            /* iOS ФИКСЫ */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior: none;
         }
         
         * {
             box-sizing: border-box;
+        }
+        
+        /* iOS СОВМЕСТИМОСТЬ */
+        input[type="file"] {
+            -webkit-appearance: none;
+            appearance: none;
         }
         
         input::placeholder, textarea::placeholder {
@@ -233,10 +277,30 @@
                 min-width: auto !important;
             }
         }
+
+        /* iOS СПЕЦИАЛЬНЫЕ ФИКСЫ */
+        @supports (-webkit-touch-callout: none) {
+            .ios-fix {
+                -webkit-overflow-scrolling: touch;
+            }
+        }
     </style>
 
     <script>
         const proxyUrl = window.location.origin;
+        
+        // ДЕТЕКЦИЯ iOS И ДИАГНОСТИКА
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isTelegramWebApp = window.Telegram && window.Telegram.WebApp;
+        
+        if (isIOS) {
+            console.log('🍎 iOS detected, applying iOS-specific fixes');
+            document.getElementById('ios-debug').style.display = 'block';
+            document.getElementById('debug-info').textContent = 
+                `iOS: ${navigator.userAgent.includes('iPhone') ? 'iPhone' : 'iPad'}, ` +
+                `Telegram: ${isTelegramWebApp ? 'Yes' : 'No'}, ` +
+                `FileReader: ${typeof FileReader !== 'undefined' ? 'Available' : 'Not available'}`;
+        }
         
         // ЭКСТРЕННАЯ ОЧИСТКА ПАМЯТИ
         try {
@@ -250,7 +314,7 @@
         const CORRECT_PROMO_CODE = 'STILIST';
         const TEST_PROMO_CODE = 'TEST30';
         
-        // КАРДИНАЛЬНО УЛУЧШЕННЫЕ ПРОМПТЫ ДЛЯ ТОЧНОЙ ПЕРЕДАЧИ ПРИЧЕСОК
+        // ПРОМПТЫ ОСТАЮТСЯ ТЕ ЖЕ
         const GENERATION_SYSTEM_PROMPT = `You are an elite AI hairstylist with photorealistic precision. Your ONLY task is hair replacement while maintaining perfect facial identity.
 
 CORE PRINCIPLES:
@@ -275,7 +339,6 @@ QUALITY STANDARDS:
 
         const SUGGESTION_SYSTEM_PROMPT = `You are an expert hairstylist. Analyze this face shape and features. Provide 3-4 specific hairstyle recommendations in Russian using bullet points. Be concise and practical.`;
 
-        // КРАТКИЙ ПРОМПТ ДЛЯ ОПИСАНИЯ (БЕЗ ЛИШНЕГО ТЕКСТА)
         const DESCRIBE_SYSTEM_PROMPT = `Describe this hairstyle in Russian briefly and technically. Include only: length, cut type, color, texture. No introductions or explanations. Just the description for AI generation.`;
 
         // Состояние приложения
@@ -290,13 +353,67 @@ QUALITY STANDARDS:
         let maxGenerations = parseInt(localStorage.getItem('maxGenerations_v2') || '10');
         let isPro = localStorage.getItem('isPro_v2') === 'true';
         
-        // Утилиты
+        // iOS СОВМЕСТИМЫЙ FILE READER
         const fileToBase64 = (file) => {
             return new Promise((resolve, reject) => {
+                console.log('📁 Converting file to base64, size:', file.size, 'type:', file.type);
+                
+                if (!file) {
+                    reject(new Error('No file provided'));
+                    return;
+                }
+                
+                // ПРОВЕРКА РАЗМЕРА ФАЙЛА (макс 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    reject(new Error('Файл слишком большой. Максимум 10МБ.'));
+                    return;
+                }
+                
+                // ПРОВЕРКА ТИПА ФАЙЛА
+                if (!file.type.startsWith('image/')) {
+                    reject(new Error('Пожалуйста, выберите изображение.'));
+                    return;
+                }
+                
                 const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result.split(',')[1]);
-                reader.onerror = error => reject(error);
+                
+                reader.onload = function(event) {
+                    try {
+                        const result = event.target.result;
+                        if (result && typeof result === 'string') {
+                            const base64 = result.split(',')[1];
+                            if (base64) {
+                                console.log('✅ File converted successfully, base64 length:', base64.length);
+                                resolve(base64);
+                            } else {
+                                reject(new Error('Ошибка конвертации файла.'));
+                            }
+                        } else {
+                            reject(new Error('Некорректный результат чтения файла.'));
+                        }
+                    } catch (error) {
+                        console.error('❌ Error in FileReader onload:', error);
+                        reject(error);
+                    }
+                };
+                
+                reader.onerror = function(error) {
+                    console.error('❌ FileReader error:', error);
+                    reject(new Error('Ошибка чтения файла. Попробуйте другой файл.'));
+                };
+                
+                reader.onabort = function() {
+                    console.error('❌ FileReader aborted');
+                    reject(new Error('Чтение файла прервано.'));
+                };
+                
+                // ЗАПУСК ЧТЕНИЯ
+                try {
+                    reader.readAsDataURL(file);
+                } catch (error) {
+                    console.error('❌ Error starting FileReader:', error);
+                    reject(new Error('Не удалось начать чтение файла.'));
+                }
             });
         };
         
@@ -341,16 +458,38 @@ QUALITY STANDARDS:
             }
         };
         
-        // Обработчики файлов
+        // iOS СОВМЕСТИМАЯ ОБРАБОТКА ФАЙЛОВ
         const handleFileSelect = async (file, photoType) => {
-            const preview = URL.createObjectURL(file);
+            console.log('📱 Handling file select for:', photoType, 'File:', file);
+            
+            if (!file) {
+                showErrorModal('Файл не выбран или поврежден.');
+                return;
+            }
+            
+            const statusElement = document.getElementById(photoType + '-upload-status');
+            statusElement.style.display = 'block';
+            statusElement.textContent = 'Обработка файла...';
+            
             try {
+                const preview = URL.createObjectURL(file);
                 const base64 = await fileToBase64(file);
+                
                 const setter = photoType === 'client' ? setClientPhoto : setStylePhoto;
                 setter({ file, preview, base64 });
+                
+                statusElement.textContent = 'Файл загружен ✅';
+                setTimeout(() => {
+                    statusElement.style.display = 'none';
+                }, 2000);
+                
             } catch (error) {
-                console.error("Error converting file to base64", error);
-                showErrorModal('Не удалось обработать файл.');
+                console.error("❌ File processing error:", error);
+                statusElement.textContent = 'Ошибка: ' + error.message;
+                setTimeout(() => {
+                    statusElement.style.display = 'none';
+                }, 3000);
+                showErrorModal(error.message);
             }
         };
         
@@ -374,40 +513,44 @@ QUALITY STANDARDS:
             }
         };
         
-        // Настройка загрузчиков файлов
+        // НАСТРОЙКА iOS СОВМЕСТИМЫХ ЗАГРУЗЧИКОВ
         const setupFileUploaders = () => {
+            // CLIENT PHOTO UPLOADER
             const clientUploader = document.getElementById('client-photo-uploader');
-            const styleUploader = document.getElementById('style-photo-uploader');
+            const clientFileInput = document.getElementById('client-file-input');
             
-            [clientUploader, styleUploader].forEach((uploader, index) => {
-                const photoType = index === 0 ? 'client' : 'style';
-                
-                uploader.addEventListener('click', () => {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = 'image/*';
-                    input.onchange = (e) => {
-                        if (e.target.files[0]) {
-                            handleFileSelect(e.target.files[0], photoType);
-                        }
-                    };
-                    input.click();
-                });
-                
-                uploader.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                });
-                
-                uploader.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    if (e.dataTransfer.files[0]) {
-                        handleFileSelect(e.dataTransfer.files[0], photoType);
-                    }
-                });
+            clientUploader.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('🖱️ Client uploader clicked');
+                clientFileInput.click();
+            });
+            
+            clientFileInput.addEventListener('change', (e) => {
+                console.log('📁 Client file input changed', e.target.files);
+                if (e.target.files && e.target.files[0]) {
+                    handleFileSelect(e.target.files[0], 'client');
+                }
+            });
+            
+            // STYLE PHOTO UPLOADER  
+            const styleUploader = document.getElementById('style-photo-uploader');
+            const styleFileInput = document.getElementById('style-file-input');
+            
+            styleUploader.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('🖱️ Style uploader clicked');
+                styleFileInput.click();
+            });
+            
+            styleFileInput.addEventListener('change', (e) => {
+                console.log('📁 Style file input changed', e.target.files);
+                if (e.target.files && e.target.files[0]) {
+                    handleFileSelect(e.target.files[0], 'style');
+                }
             });
         };
         
-        // API запросы
+        // API запросы (БЕЗ ИЗМЕНЕНИЙ)
         const generateImage = async ({ clientPhotoBase64, stylePhotoBase64, prompt }) => {
             const response = await fetch(`${proxyUrl}/api/generate`, {
                 method: 'POST',
@@ -456,7 +599,7 @@ QUALITY STANDARDS:
             return data.text;
         };
         
-        // РАДИКАЛЬНО УЛУЧШЕННАЯ ФУНКЦИЯ ГЕНЕРАЦИИ
+        // ОСТАЛЬНЫЕ ФУНКЦИИ БЕЗ ИЗМЕНЕНИЙ (генерация, советы, описание, промокоды, поделиться)
         const handleGenerate = async () => {
             if (!clientPhoto.base64) {
                 showErrorModal("Пожалуйста, загрузите ваше фото.");
@@ -476,10 +619,8 @@ QUALITY STANDARDS:
             
             setLoading(true);
             
-            // СУПЕР-ПРОМПТ ДЛЯ ТОЧНОЙ ПЕРЕДАЧИ ПРИЧЕСКИ
             let userPrompt = prompt || "professional hairstyle transformation";
             
-            // ЕСЛИ ЕСТЬ ФОТО-ПРИМЕР - МАКСИМАЛЬНЫЙ ФОКУС НА КОПИРОВАНИИ
             if (stylePhoto.base64) {
                 userPrompt = `REFERENCE HAIRSTYLE REPLICATION TASK:
 
@@ -500,7 +641,6 @@ CLIENT REQUEST: ${userPrompt}
 
 The goal is hairstyle TRANSFER - not creation. Copy the reference hairstyle onto this client's face with surgical precision.`;
             } else {
-                // БЕЗ ФОТО-ПРИМЕРА - АКЦЕНТ НА СОХРАНЕНИИ ЛИЦА
                 userPrompt = `HAIRSTYLE CREATION TASK:
 
 STEP 1: PRESERVE client's face completely (features, proportions, expression)
@@ -588,7 +728,6 @@ FINAL CHECKLIST:
             }
         };
         
-        // ИСПРАВЛЕННАЯ ФУНКЦИЯ ОПИСАНИЯ (КРАТКИЙ РЕЗУЛЬТАТ)
         const describeHairstyle = async () => {
             const result = await handleLLMCall(
                 DESCRIBE_SYSTEM_PROMPT, 
@@ -596,14 +735,13 @@ FINAL CHECKLIST:
                 stylePhoto.base64
             );
             if (result) {
-                // Убираем ВСЕ лишние фразы
                 const cleanResult = result
-                    .replace(/\*\*[^*]*\*\*/g, '') // убираем **заголовки**
+                    .replace(/\*\*[^*]*\*\*/g, '')
                     .replace(/Отлично.*?повторить\./g, '')
                     .replace(/Техническое описание прически:/g, '')
                     .replace(/Давайте разберем.*?:/g, '')
-                    .replace(/^\s*[-•*]\s*/gm, '') // убираем маркеры списков
-                    .replace(/\n+/g, ' ') // склеиваем строки
+                    .replace(/^\s*[-•*]\s*/gm, '')
+                    .replace(/\n+/g, ' ')
                     .trim();
                 
                 document.getElementById('prompt-input').value = cleanResult;
@@ -631,7 +769,6 @@ FINAL CHECKLIST:
             window.open('https://t.me/tatianasotina', '_blank');
         };
         
-        // ФУНКЦИИ ПОДЕЛИТЬСЯ В СОЦСЕТЯХ
         const shareToVK = () => {
             if (!generatedImage.preview) {
                 showErrorModal('Сначала сгенерируйте изображение!');
@@ -688,6 +825,10 @@ FINAL CHECKLIST:
             document.getElementById('result-placeholder').style.display = 'block';
             document.getElementById('prompt-input').value = '';
             
+            // Сброс input полей
+            document.getElementById('client-file-input').value = '';
+            document.getElementById('style-file-input').value = '';
+            
             updateUI();
         };
         
@@ -699,8 +840,10 @@ FINAL CHECKLIST:
             maxCount.textContent = maxGenerations;
         };
         
-        // Инициализация
+        // ИНИЦИАЛИЗАЦИЯ С iOS ФИКСАМИ
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 App initializing...');
+            
             setupFileUploaders();
             
             // Обработчики событий
@@ -725,7 +868,7 @@ FINAL CHECKLIST:
             });
             
             updateUI();
-            console.log('MISS SLIVKI AI загружен с исправленными промптами! 🎨');
+            console.log('✅ MISS SLIVKI AI загружен с iOS фиксами!');
         });
     </script>
 </body>
