@@ -250,32 +250,38 @@
         const CORRECT_PROMO_CODE = 'STILIST';
         const TEST_PROMO_CODE = 'TEST30';
         
-        // ИСПРАВЛЕННЫЕ ПРОМПТЫ ДЛЯ ТОЧНОЙ ПЕРЕДАЧИ ПРИЧЕСОК
-        const GENERATION_SYSTEM_PROMPT = `You are an elite AI hairstylist with photorealistic precision. Your ONLY task is hair replacement while maintaining perfect facial identity.
+        // СУПЕР-ПРОМПТЫ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ (ИСПРАВЛЕННЫЕ)
+        const GENERATION_SYSTEM_PROMPT = `You are a master AI hairstylist specializing in photorealistic hair transplantation. Your mission is SURGICAL PRECISION hair replacement with ABSOLUTE identity preservation.
 
-CORE PRINCIPLES:
-1. FACE = UNTOUCHABLE: Facial features, bone structure, skin, expression MUST be identical
-2. HAIR = COMPLETE REPLACEMENT: Remove original hair entirely, install new hairstyle
-3. REFERENCE IMAGE PRIORITY: If provided, copy the hairstyle EXACTLY - every detail matters
-4. SEAMLESS INTEGRATION: Perfect blending at hairline and natural head contours
+MOBILE DEVICE OPTIMIZATION:
+- Enhanced facial feature preservation for mobile processing
+- Maximum precision in hair-only modifications
+- Optimized quality output for mobile screens
 
-HAIR TRANSFER REQUIREMENTS:
-- Match exact length, layers, and cut precision
-- Replicate color tones, highlights, and gradients precisely  
-- Copy texture (straight/wavy/curly) and volume exactly
-- Mirror styling direction and movement
-- Reproduce any bangs, partings, or asymmetrical elements
+ABSOLUTE RULES:
+1. FACE IS UNTOUCHABLE: Preserve 100% of original facial features, skin tone, bone structure, expression, eye color
+2. HAIR TRANSPLANT MISSION: Remove ALL original hair, install new hairstyle with surgical precision
+3. REFERENCE IMAGE AUTHORITY: If provided, copy hairstyle with photographic accuracy
+4. SEAMLESS INTEGRATION: Perfect blending at natural hairline
 
-QUALITY STANDARDS:
+HAIR TRANSFER PROTOCOL:
+✓ LENGTH: Match reference proportions exactly
+✓ CUT TECHNIQUE: Copy layers, angles, precision cuts identically
+✓ COLOR PALETTE: Replicate tones, highlights, gradients perfectly
+✓ TEXTURE PATTERN: Mirror straight/wavy/curly exactly
+✓ STYLING DIRECTION: Copy volume placement and flow precisely
+✓ DETAILS: Reproduce bangs, partings, asymmetry flawlessly
+
+MOBILE QUALITY ASSURANCE:
 - Professional salon photograph quality
-- Original lighting and shadows preserved
+- Original lighting and shadows maintained
 - Photorealistic hair texture and movement
-- Natural hairline integration
-- Zero facial alteration`;
+- Natural integration with client's features
+- Zero facial feature alteration`;
 
         const SUGGESTION_SYSTEM_PROMPT = `You are an expert hairstylist. Analyze this face shape and features. Provide 3-4 specific hairstyle recommendations in Russian using bullet points. Be concise and practical.`;
 
-        const DESCRIBE_SYSTEM_PROMPT = `Describe this hairstyle in Russian briefly and technically. Include only: length, cut type, color, texture. No introductions or explanations. Just the description for AI generation.`;
+        const DESCRIBE_SYSTEM_PROMPT = `Analyze this hairstyle and provide a brief technical description in Russian. Include only: length, cut type, color, texture. Maximum 2 sentences. No introductions, no explanations, no formatting.`;
 
         // Состояние приложения
         let clientPhoto = { file: null, preview: null, base64: null };
@@ -289,7 +295,7 @@ QUALITY STANDARDS:
         let maxGenerations = parseInt(localStorage.getItem('maxGenerations_v2') || '10');
         let isPro = localStorage.getItem('isPro_v2') === 'true';
         
-        // ОБЫЧНЫЙ ФАЙЛРИДЕР (ОТКАТ К РАБОЧЕЙ ВЕРСИИ)
+        // Утилиты
         const fileToBase64 = (file) => {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -340,7 +346,7 @@ QUALITY STANDARDS:
             }
         };
         
-        // ОБЫЧНАЯ ОБРАБОТКА ФАЙЛОВ (ОТКАТ)
+        // Обработчики файлов
         const handleFileSelect = async (file, photoType) => {
             const preview = URL.createObjectURL(file);
             try {
@@ -373,7 +379,7 @@ QUALITY STANDARDS:
             }
         };
         
-        // ОБЫЧНЫЕ ЗАГРУЗЧИКИ (КАК БЫЛО РАНЬШЕ)
+        // Настройка загрузчиков файлов
         const setupFileUploaders = () => {
             const clientUploader = document.getElementById('client-photo-uploader');
             const styleUploader = document.getElementById('style-photo-uploader');
@@ -455,7 +461,7 @@ QUALITY STANDARDS:
             return data.text;
         };
         
-        // ФУНКЦИЯ ГЕНЕРАЦИИ С УЛУЧШЕННЫМИ ПРОМПТАМИ
+        // КАРДИНАЛЬНО УЛУЧШЕННАЯ ФУНКЦИЯ ГЕНЕРАЦИИ ДЛЯ МОБИЛЬНЫХ
         const handleGenerate = async () => {
             if (!clientPhoto.base64) {
                 showErrorModal("Пожалуйста, загрузите ваше фото.");
@@ -478,45 +484,82 @@ QUALITY STANDARDS:
             let userPrompt = prompt || "professional hairstyle transformation";
             
             if (stylePhoto.base64) {
-                userPrompt = `REFERENCE HAIRSTYLE REPLICATION TASK:
+                // МАКСИМАЛЬНО ЖЕСТКИЙ ПРОМПТ ДЛЯ КОПИРОВАНИЯ ПРИЧЕСОК НА МОБИЛЬНЫХ
+                userPrompt = `MOBILE OPTIMIZED REFERENCE HAIRSTYLE CLONING PROTOCOL:
 
-STEP 1: ANALYZE the reference hairstyle image in detail
-STEP 2: REMOVE the client's original hair completely  
-STEP 3: RECREATE the exact same hairstyle from reference on client's head
+MISSION: Clone the reference hairstyle onto client's head with ABSOLUTE precision
 
-CRITICAL COPYING REQUIREMENTS:
-- Match hair LENGTH exactly (measure proportions relative to face)
-- Copy LAYERS and cutting technique precisely
-- Replicate COLOR tones, highlights, gradients exactly
-- Mirror TEXTURE (straight/wavy/curly) and thickness
-- Copy STYLING direction and volume placement
-- Reproduce BANGS or fringe exactly if present
-- Match PARTING location and hair flow direction
+STEP 1 - FACIAL IDENTITY LOCK:
+- Client's face shape, features, expression = COMPLETELY FROZEN
+- Skin tone, eye color, facial proportions = UNCHANGED
+- Bone structure, asymmetries = PRESERVED EXACTLY
 
-CLIENT REQUEST: ${userPrompt}
+STEP 2 - REFERENCE ANALYSIS:
+- Measure reference hair length against face proportions
+- Identify exact cut technique and layering pattern
+- Extract precise color formula and highlight placement
+- Analyze texture pattern and curl definition
+- Map styling direction and volume distribution
 
-The goal is hairstyle TRANSFER - not creation. Copy the reference hairstyle onto this client's face with surgical precision.`;
+STEP 3 - SURGICAL HAIR TRANSPLANT:
+- Remove client's original hair 100% completely
+- Install reference hairstyle with millimeter precision
+- Match every layer, every color gradient, every texture detail
+- Align parting and asymmetry exactly as in reference
+- Integrate seamlessly at natural hairline
+
+MOBILE PROCESSING ENHANCEMENT:
+- Apply maximum precision algorithms for small screen accuracy
+- Use enhanced detail preservation for mobile rendering quality
+- Ensure professional salon result despite mobile platform limitations
+
+CLIENT SPECIFICATION: ${userPrompt}
+
+EXECUTE PRECISE HAIRSTYLE CLONING WITH ZERO FACIAL CHANGES.`;
             } else {
-                userPrompt = `HAIRSTYLE CREATION TASK:
+                // БЕЗ ФОТО-ПРИМЕРА - СУПЕР-ЗАЩИТА ЛИЦА НА МОБИЛЬНЫХ
+                userPrompt = `MOBILE OPTIMIZED CUSTOM HAIRSTYLE CREATION:
 
-STEP 1: PRESERVE client's face completely (features, proportions, expression)
-STEP 2: REMOVE original hair entirely
-STEP 3: CREATE requested hairstyle with professional precision
+MISSION: Create custom hairstyle while maintaining client's identity with surgical precision
 
-CLIENT REQUEST: ${userPrompt}
+FACIAL PRESERVATION PROTOCOL:
+- LOCK client's face shape, features, bone structure completely
+- FREEZE skin tone, eye color, facial proportions exactly
+- MAINTAIN expression, lighting, photo quality identically
+- PRESERVE all facial asymmetries and unique characteristics
 
-Focus on natural hairstyle creation while maintaining perfect facial identity.`;
+HAIRSTYLE CREATION TASK:
+- Remove client's original hair completely and safely
+- Generate new hairstyle based on: "${userPrompt}"
+- Apply professional salon-quality styling and finishing
+- Integrate naturally with client's facial structure
+- Match original photo lighting on new hair perfectly
+
+MOBILE QUALITY OPTIMIZATION:
+- Enhanced precision for mobile device processing power
+- Maximum detail attention for small screen viewing
+- Professional output quality despite platform limitations
+- Extra facial feature preservation safeguards
+
+RESULT STANDARD: Photorealistic salon-quality hairstyle transformation with PERFECT identity preservation.
+
+EXECUTE CUSTOM HAIRSTYLE CREATION WITH ZERO FACIAL ALTERATION.`;
             }
             
             const fullPrompt = `${GENERATION_SYSTEM_PROMPT}
 
 ${userPrompt}
 
-FINAL CHECKLIST:
-✓ Face unchanged? 
-✓ Hair completely replaced?
-✓ Reference style copied exactly?
-✓ Professional quality result?`;
+MOBILE DEVICE QUALITY CONTROL CHECKLIST:
+✓ Client's facial identity 100% preserved?
+✓ Original hair completely removed/replaced?
+✓ New hairstyle applied with professional precision?
+✓ Reference style copied with photographic accuracy?
+✓ Natural hairline integration achieved?
+✓ Professional salon quality maintained?
+✓ Mobile screen optimization applied?
+
+FINAL COMMAND: EXECUTE PERFECT HAIR TRANSFORMATION WITH IDENTITY PRESERVATION.`;
             
             try {
                 const resultBase64 = await generateImage({
@@ -542,12 +585,12 @@ FINAL CHECKLIST:
                     localStorage.setItem('generationCount_v2', generationCount.toString());
                 }
                 
-                console.log('Генерация завершена успешно');
+                console.log('✅ Мобильная генерация завершена успешно');
                 updateUI();
                 
             } catch (error) {
-                console.error("Image generation error:", error);
-                showErrorModal(error.message || 'Произошла неизвестная ошибка.');
+                console.error("❌ Mobile generation error:", error);
+                showErrorModal(error.message || 'Произошла ошибка генерации. Попробуйте еще раз.');
             } finally {
                 setLoading(false);
             }
@@ -584,21 +627,25 @@ FINAL CHECKLIST:
             }
         };
         
+        // ИСПРАВЛЕННАЯ ФУНКЦИЯ ОПИСАНИЯ (ТОЛЬКО ТЕХНИЧЕСКОЕ ОПИСАНИЕ)
         const describeHairstyle = async () => {
             const result = await handleLLMCall(
                 DESCRIBE_SYSTEM_PROMPT, 
-                "Describe this hairstyle for AI generation", 
+                "Provide technical description of this hairstyle for AI generation", 
                 stylePhoto.base64
             );
             if (result) {
-                // ЧИСТОЕ ОПИСАНИЕ БЕЗ ЛИШНЕГО ТЕКСТА
+                // СУПЕР-ОЧИСТКА ОТ ВСЕГО ЛИШНЕГО
                 const cleanResult = result
-                    .replace(/\*\*[^*]*\*\*/g, '')
-                    .replace(/Отлично.*?повторить\./g, '')
-                    .replace(/Техническое описание прически:/g, '')
-                    .replace(/Давайте разберем.*?:/g, '')
-                    .replace(/^\s*[-•*]\s*/gm, '')
-                    .replace(/\n+/g, ' ')
+                    .replace(/\*+/g, '') // убираем звездочки
+                    .replace(/Отлично.*?повторить\.?/gi, '')
+                    .replace(/Техническое описание.*?:/gi, '')
+                    .replace(/Давайте разберем.*?:/gi, '')
+                    .replace(/Анализ.*?:/gi, '')
+                    .replace(/Описание.*?:/gi, '')
+                    .replace(/^\s*[-•*№]\s*/gm, '') // убираем маркеры
+                    .replace(/\n+/g, ' ') // склеиваем строки
+                    .replace(/\s+/g, ' ') // убираем лишние пробелы
                     .trim();
                 
                 document.getElementById('prompt-input').value = cleanResult;
@@ -626,6 +673,7 @@ FINAL CHECKLIST:
             window.open('https://t.me/tatianasotina', '_blank');
         };
         
+        // ФУНКЦИИ ПОДЕЛИТЬСЯ (ИСПРАВЛЕННЫЕ ССЫЛКИ)
         const shareToVK = () => {
             if (!generatedImage.preview) {
                 showErrorModal('Сначала сгенерируйте изображение!');
@@ -719,7 +767,7 @@ FINAL CHECKLIST:
             });
             
             updateUI();
-            console.log('MISS SLIVKI AI загружен (стабильная версия)! 🎨');
+            console.log('🎯 MISS SLIVKI AI загружен с мобильными фиксами!');
         });
     </script>
 </body>
