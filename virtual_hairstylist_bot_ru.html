@@ -43,31 +43,34 @@
                 </ul>
             </div>
 
-            <!-- Счетчик генераций и промокод -->
+            <!-- Счетчик генераций и промокод (ИСПРАВЛЕНО ДЛЯ МОБИЛЬНЫХ) -->
             <div style="margin: 24px; padding: 20px; background: rgba(255, 255, 255, 0.12); border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);">
                 <p style="text-align: center; font-size: 16px; color: #ffffff; margin: 0 0 16px 0; font-weight: 500;">
                     Осталось бесплатных генераций: <span id="remaining-count">5</span> / <span id="max-count">10</span>
                 </p>
                 
-                <div style="display: flex; gap: 12px; align-items: center;">
+                <!-- МОБИЛЬНАЯ АДАПТАЦИЯ -->
+                <div style="display: flex; flex-direction: column; gap: 12px;">
                     <input 
                         type="text" 
                         id="promo-input" 
                         placeholder="Введите промокод"
-                        style="flex: 1; padding: 12px 16px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; background: rgba(255, 255, 255, 0.1); color: #ffffff; font-size: 15px; backdrop-filter: blur(6px);"
+                        style="width: 100%; padding: 12px 16px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; background: rgba(255, 255, 255, 0.1); color: #ffffff; font-size: 15px; backdrop-filter: blur(6px);"
                     />
-                    <button 
-                        id="apply-promo" 
-                        style="padding: 12px 20px; background: linear-gradient(45deg, #8a7f76, #9a8f86); color: #ffffff; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 15px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); transition: all 0.2s;"
-                    >
-                        Применить
-                    </button>
-                    <button 
-                        id="buy-generations" 
-                        style="padding: 12px 20px; background: linear-gradient(45deg, #6a5f56, #7a6f66); color: #ffffff; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 15px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); transition: all 0.2s;"
-                    >
-                        Купить генерации
-                    </button>
+                    <div style="display: flex; gap: 8px;">
+                        <button 
+                            id="apply-promo" 
+                            style="flex: 1; padding: 12px 16px; background: linear-gradient(45deg, #8a7f76, #9a8f86); color: #ffffff; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); transition: all 0.2s;"
+                        >
+                            Применить
+                        </button>
+                        <button 
+                            id="buy-generations" 
+                            style="flex: 1; padding: 12px 16px; background: linear-gradient(45deg, #6a5f56, #7a6f66); color: #ffffff; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); transition: all 0.2s;"
+                        >
+                            Купить генерации
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -209,10 +212,35 @@
             border-color: rgba(255, 255, 255, 0.5);
             background: rgba(255, 255, 255, 0.1);
         }
+        
+        /* МОБИЛЬНАЯ АДАПТАЦИЯ */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 32px !important;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr !important;
+            }
+            
+            /* Исправляем переполнение на мобильных */
+            * {
+                max-width: 100%;
+                word-wrap: break-word;
+            }
+        }
     </style>
 
     <script>
         const proxyUrl = window.location.origin;
+        
+        // ЭКСТРЕННАЯ ОЧИСТКА ПАМЯТИ
+        try {
+            localStorage.clear();
+            console.log('Память очищена');
+        } catch (e) {
+            console.log('Ошибка очистки памяти');
+        }
         
         // Константы промокодов
         const CORRECT_PROMO_CODE = 'STILIST';
@@ -234,14 +262,7 @@
         let generationCount = parseInt(localStorage.getItem('generationCount_v2') || '0');
         let maxGenerations = parseInt(localStorage.getItem('maxGenerations_v2') || '10');
         let isPro = localStorage.getItem('isPro_v2') === 'true';
-        let generationHistory = []; // Отключаем историю
-        
-        // Очистка localStorage при старте
-        try {
-            localStorage.removeItem('generationHistory_v1');
-        } catch (e) {
-            console.log('История очищена при старте');
-        }
+        let generationHistory = []; // Отключено полностью
         
         // Утилиты
         const fileToBase64 = (file) => {
@@ -456,7 +477,7 @@
                     localStorage.setItem('generationCount_v2', generationCount.toString());
                 }
                 
-                // НЕ СОХРАНЯЕМ ИСТОРИЮ ИЗОБРАЖЕНИЙ - они слишком большие
+                // История отключена полностью
                 console.log('Генерация завершена успешно');
                 
                 updateUI();
@@ -520,17 +541,15 @@
             updateUI();
         };
         
+        // ПЕРЕХОД В TELEGRAM ПРИ ПОКУПКЕ ГЕНЕРАЦИЙ
+        const buyGenerations = () => {
+            window.open('https://t.me/tatianasotina', '_blank');
+        };
+        
         const resetAll = () => {
             clientPhoto = { file: null, preview: null, base64: null };
             stylePhoto = { file: null, preview: null, base64: null };
             generatedImage = { preview: null };
-            
-            // Очистка localStorage при переполнении
-            try {
-                localStorage.removeItem('generationHistory_v1');
-            } catch (e) {
-                console.log('История очищена');
-            }
             
             document.getElementById('client-photo-preview').style.display = 'none';
             document.getElementById('style-photo-preview').style.display = 'none';
@@ -558,6 +577,7 @@
             document.getElementById('suggest-hairstyles').addEventListener('click', getHairstyleSuggestions);
             document.getElementById('describe-hairstyle').addEventListener('click', describeHairstyle);
             document.getElementById('apply-promo').addEventListener('click', applyPromoCode);
+            document.getElementById('buy-generations').addEventListener('click', buyGenerations); // НОВОЕ!
             document.getElementById('reset-all').addEventListener('click', resetAll);
             document.getElementById('close-modal').addEventListener('click', () => setModal({ visible: false }));
             
