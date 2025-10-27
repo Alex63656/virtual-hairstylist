@@ -1,5 +1,0 @@
-{
-  "name": "Virtual AI Stylist",
-  "description": "An AI-powered virtual stylist that allows users to try on new hairstyles by uploading their photo and providing a style reference or description. The application leverages Gemini to generate photorealistic images of the new look.",
-  "requestFramePermissions": []
-}
