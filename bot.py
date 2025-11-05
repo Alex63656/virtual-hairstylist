@@ -45,7 +45,7 @@ if BOT_TOKEN:
 # --- Настройка Gemini API ---
 try:
     # API ключ вписан в код согласно вашему требованию.
-    api_key = "AIzaSyCX-D5d5kXJrmyMZJREykCQAbx-bXqVCIk"
+    api_key = "AIzaSyCdbu8Kot4ajjEl-OLg1KXtOgk4aUzebN8"
     
     genai.configure(api_key=api_key)
     
@@ -423,3 +423,4 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     print(f"🚀 Запуск сервера на порту {port}")
     app.run(host='0.0.0.0', port=port, debug=False)
+
